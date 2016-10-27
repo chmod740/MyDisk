@@ -39,4 +39,5 @@ def register(req):
         print(re_password)
         return render_to_response('register.html')
 
-
+def index(req):
+    return render_to_response('index.html')
