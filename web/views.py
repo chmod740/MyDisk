@@ -1,7 +1,10 @@
 from django.shortcuts import render_to_response
+from django.views.decorators.csrf import csrf_exempt
+
 from web.models import User
 # Create your views here.
 
+@csrf_exempt
 def login(req):
     if req.method == "GET":
         return render_to_response('login.html')
@@ -23,4 +26,17 @@ def login(req):
                     user = None
         if user is None:
             return render_to_response('login.html', {'msg': '用户名或者密码错误'})
+@csrf_exempt
+def register(req):
+    if req.method == 'GET':
+        return render_to_response('register.html', {'msg': None})
+    else:
+        username = req.GET.get('username', None)
+        password = req.GET.get('password', None)
+        re_password = req.GET.get('re_password', None)
+        print(username)
+        print(password)
+        print(re_password)
+        return render_to_response('register.html')
+
 
