@@ -11,5 +11,10 @@
         <input name="re_password" type="password"><br>
         <input value="注册" type="submit">
     </form>
+    <p>
+        {% if msg%}
+            <p>{{ msg }}</p>
+        {% endif %}
+    </p>
 </body>
 </html>

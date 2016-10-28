@@ -6,9 +6,12 @@
 </head>
 <body>
     <form method="post">
-        <input name="username"><br>
-        <input name="password" type="password"><br>
+        用户名<input name="username"><br>
+        密码<input name="password" type="password"><br>
         <input value="登录" type="submit">
     </form>
+    {% if msg%}
+        <p>{{ msg }}</p>
+    {% endif %}
 </body>
 </html>
