@@ -4,20 +4,20 @@
 {% block content %}
 <div class="max-w-2xl mx-auto">
     <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold">{{ user_obj.username }}</h1>
+        <h1 class="text-2xl font-bold dark:text-white">{{ user_obj.username }}</h1>
         <a href="{% url 'admin_user_list' %}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">&larr; 返回用户列表</a>
     </div>
 
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-4">
         <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3">基本信息</h3>
-        <div class="grid grid-cols-2 gap-3 text-sm">
-            <div><span class="text-gray-500">邮箱：</span>{{ user_obj.email|default:'未设置' }}</div>
-            <div><span class="text-gray-500">注册时间：</span>{{ user_obj.date_joined|date:'Y-m-d H:i' }}</div>
-            <div><span class="text-gray-500">存储用量：</span>{{ user_obj.storage_used|filesizeformat }}</div>
-            <div><span class="text-gray-500">存储配额：</span>{{ user_obj.storage_quota|filesizeformat }}</div>
-            <div><span class="text-gray-500">当前组：</span>{{ user_obj.group.name|default:'无' }}</div>
+        <div class="grid grid-cols-2 gap-3 text-sm dark:text-gray-200">
+            <div><span class="text-gray-500 dark:text-gray-400">邮箱：</span>{{ user_obj.email|default:'未设置' }}</div>
+            <div><span class="text-gray-500 dark:text-gray-400">注册时间：</span>{{ user_obj.date_joined|date:'Y-m-d H:i' }}</div>
+            <div><span class="text-gray-500 dark:text-gray-400">存储用量：</span>{{ user_obj.storage_used|filesizeformat }}</div>
+            <div><span class="text-gray-500 dark:text-gray-400">存储配额：</span>{{ user_obj.storage_quota|filesizeformat }}</div>
+            <div><span class="text-gray-500 dark:text-gray-400">当前组：</span>{{ user_obj.group.name|default:'无' }}</div>
             <div>
-                <span class="text-gray-500">角色：</span>
+                <span class="text-gray-500 dark:text-gray-400">角色：</span>
                 {% if user_obj.is_superuser %}管理员{% elif user_obj.is_staff %}Staff{% else %}用户{% endif %}
             </div>
         </div>
@@ -29,7 +29,7 @@
         <input type="hidden" name="action" value="update_group">
         <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3">修改用户组</h3>
         <div class="flex items-center space-x-3">
-            <select name="group" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <select name="group" class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 dark:text-gray-200">
                 <option value="">-- 无组 --</option>
                 {% for g in groups %}
                 <option value="{{ g.id }}" {% if user_obj.group == g %}selected{% endif %}>

@@ -25,9 +25,9 @@
                 {% for u in users %}
                 <tr class="hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700">
                     <td class="px-4 py-3 text-sm font-medium dark:text-gray-200">{{ u.username }}</td>
-                    <td class="px-4 py-3 text-sm text-gray-500">{{ u.email|default:'-' }}</td>
-                    <td class="px-4 py-3 text-sm">{{ u.group.name|default:'-' }}</td>
-                    <td class="px-4 py-3 text-sm text-gray-500">
+                    <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{{ u.email|default:'-' }}</td>
+                    <td class="px-4 py-3 text-sm dark:text-gray-200">{{ u.group.name|default:'-' }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                         {{ u.storage_used|filesizeformat }} / {{ u.storage_quota|filesizeformat }}
                     </td>
                     <td class="px-4 py-3">
@@ -36,10 +36,10 @@
                         {% elif u.is_staff %}
                         <span class="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full">Staff</span>
                         {% else %}
-                        <span class="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">用户</span>
+                        <span class="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full">用户</span>
                         {% endif %}
                     </td>
-                    <td class="px-4 py-3 text-sm text-gray-500">{{ u.date_joined|date:'Y-m-d' }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{{ u.date_joined|date:'Y-m-d' }}</td>
                     <td class="px-4 py-3 text-right">
                         <a href="{% url 'admin_user_update' u.id %}" class="text-sm text-primary-600 hover:underline">管理</a>
                     </td>
