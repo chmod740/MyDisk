@@ -1,0 +1,48 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-CN" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ bucket.name }} - {{ site_name }} 分享</title>
+    <script src="https://cdn.tailwindcss.com"></script><script>tailwind.config={darkMode:"class",theme:{extend:{colors:{primary:{500:"#3b82f6",600:"#2563eb",700:"#1d4ed8"}}}}};if(localStorage.getItem("theme")==="dark")document.documentElement.classList.add("dark");</script>
+</head>
+<body class="h-full bg-gray-50 dark:bg-gray-900">
+    <div class="max-w-4xl mx-auto py-12 px-4">
+        <div class="text-center mb-6">
+            <div class="text-sm text-gray-400 dark:text-gray-500 mb-1">{{ link.owner.username }} 分享的存储桶</div>
+            <h1 class="text-2xl font-bold dark:text-white">{{ bucket.name }}</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ files.count }} 个文件</p>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            {% if not files %}
+            <div class="px-4 py-12 text-center text-gray-400 dark:text-gray-500">此桶为空</div>
+            {% else %}
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                    <tr>
+                        <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">文件名</th>
+                        <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">大小</th>
+                        <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">类型</th>
+                        <th class="text-right px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">操作</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    {% for f in files %}
+                    <tr>
+                        <td class="px-4 py-3 text-sm dark:text-gray-200">{% if f.is_image %}🖼️{% else %}📄{% endif %} {{ f.name }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{{ f.size|filesizeformat }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{{ f.mime_type }}</td>
+                        <td class="px-4 py-3 text-right">
+                            <a href="{% url 'bucket_file_download' link.bucket.id f.id %}" class="text-sm text-primary-600 hover:underline">下载</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

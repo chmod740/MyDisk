@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}用户组管理{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold dark:text-white">用户组管理</h1>
+        <a href="{% url 'admin_group_create' %}" class="px-4 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700">创建组</a>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        {% if not groups %}
+        <div class="px-4 py-12 text-center text-gray-400">暂无用户组</div>
+        {% else %}
+        <table class="w-full">
+            <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                <tr>
+                    <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">名称</th>
+                    <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">配额</th>
+                    <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">用户数</th>
+                    <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">默认</th>
+                    <th class="text-right px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">操作</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                {% for g in groups %}
+                <tr>
+                    <td class="px-4 py-3 text-sm font-medium dark:text-gray-200">{{ g.name }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">{{ g.storage_quota|filesizeformat }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">{{ g.user_count }}</td>
+                    <td class="px-4 py-3">
+                        {% if g.is_default %}
+                        <span class="text-xs px-2 py-0.5 bg-primary-100 text-primary-700 rounded-full">默认</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-right space-x-2">
+                        <a href="{% url 'admin_group_edit' g.id %}" class="text-sm text-primary-600 hover:underline">编辑</a>
+                        <a href="{% url 'admin_group_delete' g.id %}" class="text-sm text-red-500 hover:underline">删除</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

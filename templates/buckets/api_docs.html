@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% block title %}API 使用文档{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <h1 class="text-2xl font-bold dark:text-white mb-2">API 使用文档</h1>
+    <p class="text-gray-500 dark:text-gray-400 mb-6">所有 API 通过 <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">X-Api-Key</code> Header 认证</p>
+
+    <!-- 认证 -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+        <h2 class="text-lg font-semibold dark:text-white mb-3">认证方式</h2>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">在所有请求中添加 Header：</p>
+        <code class="block bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded text-sm font-mono text-gray-800 dark:text-gray-200">X-Api-Key: djd_YOUR_API_KEY_HERE</code>
+    </div>
+
+    <!-- 桶 API -->
+    <h2 class="text-xl font-bold dark:text-white mb-3 mt-8">📦 存储桶 API</h2>
+
+    <div class="space-y-4">
+        {% with base_url=base_url|add:'' %}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2 flex items-center justify-between">
+                <span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">GET {{ base_url }}/buckets/api/buckets/</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">列出所有桶</span>
+            </div>
+            <div class="p-4 text-sm text-gray-600 dark:text-gray-400">返回用户的所有存储桶列表（JSON）。</div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2 flex items-center justify-between">
+                <span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">POST {{ base_url }}/buckets/api/buckets/create/</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">创建桶</span>
+            </div>
+            <div class="p-4 text-sm text-gray-600 dark:text-gray-400">Body (JSON): <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">{"name": "my-bucket", "is_public": false}</code></div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2 flex items-center justify-between">
+                <span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">DELETE {{ base_url }}/buckets/api/buckets/&lt;id&gt;/</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">删除桶</span>
+            </div>
+            <div class="p-4 text-sm text-gray-600 dark:text-gray-400">删除整个桶及其所有文件（不可恢复）。</div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2 flex items-center justify-between">
+                <span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">GET {{ base_url }}/buckets/api/buckets/&lt;id&gt;/files/</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">列出桶内文件</span>
+            </div>
+            <div class="p-4 text-sm text-gray-600 dark:text-gray-400">可选 <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">?path=dir1/</code> 浏览子目录。</div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2 flex items-center justify-between">
+                <span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">POST {{ base_url }}/buckets/api/buckets/&lt;id&gt;/upload/</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">上传文件</span>
+            </div>
+            <div class="p-4 text-sm text-gray-600 dark:text-gray-400">multipart/form-data: <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">files</code> (多文件), <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">folder_path</code> (可选)</div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2 flex items-center justify-between">
+                <span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">DELETE {{ base_url }}/buckets/api/buckets/&lt;id&gt;/files/&lt;fid&gt;/</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">删除文件</span>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2 flex items-center justify-between">
+                <span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">POST {{ base_url }}/buckets/api/buckets/&lt;id&gt;/folder/create/</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">创建目录</span>
+            </div>
+            <div class="p-4 text-sm text-gray-600 dark:text-gray-400">Body (JSON): <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">{"name": "photos", "parent_path": ""}</code></div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2 flex items-center justify-between">
+                <span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">DELETE {{ base_url }}/buckets/api/buckets/&lt;id&gt;/folder/?path=dir1/</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">删除目录</span>
+            </div>
+        </div>
+        {% endwith %}
+    </div>
+
+    <!-- 文件 API -->
+    <h2 class="text-xl font-bold dark:text-white mb-3 mt-8">📂 文件管理 API</h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">操作"我的文件"中的文件和文件夹。</p>
+
+    <div class="space-y-4">
+        {% with base_url=base_url|add:'' %}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2"><span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">GET {{ base_url }}/files/api/list/</span></div>
+            <div class="p-4 text-sm text-gray-600 dark:text-gray-400">列出文件和文件夹。可选 <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">?folder=&lt;id&gt;</code></div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2"><span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">POST {{ base_url }}/files/api/upload/</span></div>
+            <div class="p-4 text-sm text-gray-600 dark:text-gray-400">multipart/form-data: <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">files</code>, <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">folder</code> (可选)</div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2"><span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">GET {{ base_url }}/files/api/&lt;id&gt;/download/</span></div>
+            <div class="p-4 text-sm text-gray-600 dark:text-gray-400">下载文件（FileResponse）。</div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2"><span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">DELETE {{ base_url }}/files/api/&lt;id&gt;/delete/</span></div>
+            <div class="p-4 text-sm text-gray-600 dark:text-gray-400">软删除文件（移至回收站）。</div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2"><span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">POST {{ base_url }}/files/api/folder/create/</span></div>
+            <div class="p-4 text-sm text-gray-600 dark:text-gray-400">Body (JSON): <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">{"name": "docs", "parent": "&lt;id&gt;"}</code></div>
+        </div>
+        {% endwith %}
+    </div>
+
+    <!-- curl 示例 -->
+    <h2 class="text-xl font-bold dark:text-white mb-3 mt-8">curl 快速测试</h2>
+    <div class="bg-gray-900 rounded-xl p-4 overflow-x-auto text-sm font-mono">
+        <pre class="text-green-400"># 列出桶
+curl -H "X-Api-Key: djd_YOUR_KEY" {{ base_url }}/buckets/api/buckets/
+
+# 创建桶
+curl -X POST -H "X-Api-Key: djd_YOUR_KEY" -H "Content-Type: application/json" \
+  -d '{"name":"test","is_public":false}' {{ base_url }}/buckets/api/buckets/create/
+
+# 上传文件
+curl -X POST -H "X-Api-Key: djd_YOUR_KEY" \
+  -F "files=@hello.txt" -F "folder_path=" {{ base_url }}/buckets/api/buckets/&lt;id&gt;/upload/
+
+# 下载文件
+curl -H "X-Api-Key: djd_YOUR_KEY" -o output.txt \
+  {{ base_url }}/files/api/&lt;id&gt;/download/</pre>
+    </div>
+</div>
+{% endblock %}

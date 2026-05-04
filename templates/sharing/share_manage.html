@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block title %}分享管理{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-6 dark:text-white">我的分享</h1>
+
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    {% if not links %}
+    <div class="px-4 py-12 text-center text-gray-400 dark:text-gray-500">
+        <svg class="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+        </svg>
+        <p>暂无分享链接</p>
+    </div>
+    {% else %}
+    <table class="w-full">
+        <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+            <tr>
+                <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">分享内容</th>
+                <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">类型</th>
+                <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">密码保护</th>
+                <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">过期时间</th>
+                <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">浏览次数</th>
+                <th class="text-right px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">操作</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            {% for link in links %}
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                <td class="px-4 py-3 text-sm dark:text-gray-200">{{ link.target.name }}</td>
+                <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                    {% if link.file %}文件{% else %}文件夹{% endif %}
+                </td>
+                <td class="px-4 py-3 text-sm">
+                    {% if link.password %}
+                        <span class="text-green-600">🔒 已设置</span>
+                    {% else %}
+                        <span class="text-gray-400 dark:text-gray-500">无</span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                    {% if link.expires_at %}
+                        {{ link.expires_at|date:'Y-m-d' }}
+                        {% if link.is_expired %}<span class="text-red-500 ml-1">(已过期)</span>{% endif %}
+                    {% else %}
+                        永久有效
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{{ link.view_count }}</td>
+                <td class="px-4 py-3 text-right">
+                    <div class="flex items-center justify-end space-x-2">
+                        {% if not link.is_expired %}
+                        <button onclick="navigator.clipboard.writeText('{{ request.scheme }}://{{ request.get_host }}{% url 'share_access' link.id %}');showToast('链接已复制','success')"
+                                class="text-sm text-primary-600 hover:underline">复制链接</button>
+                        {% endif %}
+                        <form method="post" action="{% url 'share_delete' link.id %}" class="inline" onsubmit="return confirm('确定删除此分享链接？')">
+                            {% csrf_token %}
+                            <button class="text-sm text-red-600 hover:underline">删除</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>
+{% endblock %}

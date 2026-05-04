@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}回收站{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-6 dark:text-white">回收站</h1>
+
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    {% if not deleted_files and not deleted_folders %}
+    <div class="px-4 py-12 text-center text-gray-400 dark:text-gray-500">
+        <svg class="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+        <p>回收站为空</p>
+    </div>
+    {% else %}
+    <table class="w-full">
+        <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+            <tr>
+                <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">名称</th>
+                <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">删除时间</th>
+                <th class="text-right px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">操作</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            {% for f in deleted_folders %}
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                <td class="px-4 py-3 text-sm">
+                    <a href="{% url 'trash_folder_detail' f.id %}" class="text-primary-600 hover:underline">
+                        <span class="mr-2">📁</span>{{ f.name }}
+                    </a>
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{{ f.deleted_at|date:'Y-m-d H:i' }}</td>
+                <td class="px-4 py-3 text-right">
+                    <form method="post" action="{% url 'trash_restore' 'folder' f.id %}" class="inline">
+                        {% csrf_token %}
+                        <button class="text-sm text-primary-600 hover:underline mr-3">恢复</button>
+                    </form>
+                    <form method="post" action="{% url 'trash_destroy' 'folder' f.id %}" class="inline">
+                        {% csrf_token %}
+                        <button class="text-sm text-red-500 hover:underline" onclick="return confirm('彻底删除后将无法恢复，确定？')">彻底删除</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+            {% for f in deleted_files %}
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                <td class="px-4 py-3 text-sm">
+                    <span class="text-blue-500 mr-2">📄</span>{{ f.name }}
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{{ f.deleted_at|date:'Y-m-d H:i' }}</td>
+                <td class="px-4 py-3 text-right">
+                    <form method="post" action="{% url 'trash_restore' 'file' f.id %}" class="inline">
+                        {% csrf_token %}
+                        <button class="text-sm text-primary-600 hover:underline mr-3">恢复</button>
+                    </form>
+                    <form method="post" action="{% url 'trash_destroy' 'file' f.id %}" class="inline">
+                        {% csrf_token %}
+                        <button class="text-sm text-red-500 hover:underline" onclick="return confirm('彻底删除后将无法恢复，确定？')">彻底删除</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}回收站: {{ folder.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-2">
+            <a href="{% url 'trash' %}" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">&larr; 回收站</a>
+            <span class="text-gray-400 dark:text-gray-500">/</span>
+            <h1 class="text-xl font-bold dark:text-white">📁 {{ folder.name }}</h1>
+        </div>
+        <form method="post" action="{% url 'trash_restore' 'folder' folder.id %}" class="inline">
+            {% csrf_token %}
+            <button class="px-4 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700">恢复此目录</button>
+        </form>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        {% if not sub_folders and not sub_files %}
+        <div class="px-4 py-12 text-center text-gray-400 dark:text-gray-500">此目录为空</div>
+        {% else %}
+        <table class="w-full">
+            <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                <tr>
+                    <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">名称</th>
+                    <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">删除时间</th>
+                    <th class="text-right px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">操作</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                {% for sf in sub_folders %}
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td class="px-4 py-3 text-sm">
+                        <a href="{% url 'trash_folder_detail' sf.id %}" class="text-primary-600 hover:underline">
+                            <span class="mr-2">📁</span>{{ sf.name }}
+                        </a>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{{ sf.deleted_at|date:'Y-m-d H:i' }}</td>
+                    <td class="px-4 py-3 text-right">
+                        <form method="post" action="{% url 'trash_restore' 'folder' sf.id %}" class="inline">
+                            {% csrf_token %}
+                            <button class="text-sm text-primary-600 hover:underline mr-3">恢复</button>
+                        </form>
+                        <form method="post" action="{% url 'trash_destroy' 'folder' sf.id %}" class="inline">
+                            {% csrf_token %}
+                            <button class="text-sm text-red-500 hover:underline" onclick="return confirm('彻底删除后将无法恢复，确定？')">彻底删除</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% for sf in sub_files %}
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td class="px-4 py-3 text-sm"><span class="text-blue-500 mr-2">📄</span>{{ sf.name }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{{ sf.deleted_at|date:'Y-m-d H:i' }}</td>
+                    <td class="px-4 py-3 text-right">
+                        <form method="post" action="{% url 'trash_restore' 'file' sf.id %}" class="inline">
+                            {% csrf_token %}
+                            <button class="text-sm text-primary-600 hover:underline mr-3">恢复</button>
+                        </form>
+                        <form method="post" action="{% url 'trash_destroy' 'file' sf.id %}" class="inline">
+                            {% csrf_token %}
+                            <button class="text-sm text-red-500 hover:underline" onclick="return confirm('彻底删除后将无法恢复，确定？')">彻底删除</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

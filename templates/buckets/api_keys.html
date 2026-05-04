@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% block title %}API 密钥管理{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-2xl font-bold dark:text-white">API 密钥</h1>
+            <a href="{% url 'api_docs' %}"
+               class="text-sm text-primary-600 hover:underline flex items-center">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                </svg>
+                使用文档
+            </a>
+        </div>
+        <form method="post" action="{% url 'api_key_create' %}" class="flex items-center space-x-2">
+            {% csrf_token %}
+            <input type="text" name="name" placeholder="密钥名称" required
+                   class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 w-40">
+            <button type="submit" class="px-3 py-1.5 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700">
+                创建密钥
+            </button>
+        </form>
+    </div>
+
+    <!-- 显示刚创建的密钥 -->
+    {% if request.session.api_key_raw %}
+    <div class="bg-yellow-50 border border-yellow-300 rounded-lg p-4 mb-6">
+        <p class="text-sm font-medium text-yellow-800 mb-2">
+            API Key "{{ request.session.api_key_name }}" 创建成功！请立即复制保存，关闭页面后将无法再次查看：
+        </p>
+        <code class="block bg-yellow-100 px-3 py-2 rounded text-sm font-mono text-yellow-900 break-all select-all">
+            {{ request.session.api_key_raw }}
+        </code>
+    </div>
+    {% endif %}
+
+    {% if not keys %}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center text-gray-400">
+        <p class="dark:text-gray-500">暂无 API 密钥</p>
+    </div>
+    {% else %}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                <tr>
+                    <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">名称</th>
+                    <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">前缀</th>
+                    <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">状态</th>
+                    <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">创建时间</th>
+                    <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">上次使用</th>
+                    <th class="text-right px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">操作</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                {% for k in keys %}
+                <tr>
+                    <td class="px-4 py-3 text-sm dark:text-gray-200">{{ k.name }}</td>
+                    <td class="px-4 py-3 text-sm font-mono text-gray-500 dark:text-gray-400">{{ k.prefix }}...</td>
+                    <td class="px-4 py-3">
+                        <span class="text-xs px-2 py-0.5 rounded-full {% if k.is_active %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-600{% endif %}">
+                            {{ k.is_active|yesno:'启用,已撤销' }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{{ k.created_at|date:'Y-m-d H:i' }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                        {{ k.last_accessed_at|date:'Y-m-d H:i'|default:'从未使用' }}
+                    </td>
+                    <td class="px-4 py-3 text-right space-x-2">
+                        {% if k.is_active %}
+                        <form method="post" action="{% url 'api_key_revoke' k.id %}" class="inline">
+                            {% csrf_token %}
+                            <button class="text-sm text-yellow-600 hover:underline">撤销</button>
+                        </form>
+                        {% endif %}
+                        <form method="post" action="{% url 'api_key_delete' k.id %}" class="inline"
+                              onsubmit="return confirm('确定删除此 API Key？此操作不可恢复。')">
+                            {% csrf_token %}
+                            <button class="text-sm text-red-500 hover:underline">删除</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+<div class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50" @click.self="$el.remove()">
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6">
+    <div class="text-center mb-4">
+        <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        </div>
+        <h3 class="text-lg font-semibold dark:text-white">分享链接已生成</h3>
+    </div>
+
+    <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 mb-4">
+        <div class="text-xs text-gray-500 mb-1">分享链接</div>
+        <div class="flex items-center space-x-2">
+            <code class="flex-1 text-sm text-primary-700 break-all">{{ share_url }}</code>
+            <button onclick="copyShareInfo()"
+                    class="flex-shrink-0 px-3 py-1.5 text-xs bg-primary-600 text-white rounded-lg hover:bg-primary-700">复制</button>
+        </div>
+    </div>
+
+    <div class="text-sm text-gray-500 dark:text-gray-400 space-y-1 mb-4">
+        {% if raw_password %}<p>🔒 访问密码: <code class="bg-gray-100 px-1 rounded font-mono">{{ raw_password }}</code></p>{% endif %}
+        {% if link.expires_at %}<p>⏰ 过期时间: {{ link.expires_at|date:'Y-m-d H:i' }}</p>{% else %}<p>♾️ 永久有效</p>{% endif %}
+    </div>
+
+    <script>
+    function copyShareInfo() {
+        var info = '链接: {{ share_url|escapejs }}';
+        {% if raw_password %}info += '\n密码: {{ raw_password|escapejs }}';{% endif %}
+        navigator.clipboard.writeText(info);
+        showToast('已复制' + ({{ raw_password|yesno:"true,false" }} ? '（含密码）' : ''), 'success');
+    }
+    </script>
+
+    <button @click="$el.closest('.fixed').remove(); window.location.reload()"
+            class="w-full py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">关闭</button>
+</div>
+</div>

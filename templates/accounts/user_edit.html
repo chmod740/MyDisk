@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}管理用户: {{ user_obj.username }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold">{{ user_obj.username }}</h1>
+        <a href="{% url 'admin_user_list' %}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">&larr; 返回用户列表</a>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-4">
+        <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3">基本信息</h3>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+            <div><span class="text-gray-500">邮箱：</span>{{ user_obj.email|default:'未设置' }}</div>
+            <div><span class="text-gray-500">注册时间：</span>{{ user_obj.date_joined|date:'Y-m-d H:i' }}</div>
+            <div><span class="text-gray-500">存储用量：</span>{{ user_obj.storage_used|filesizeformat }}</div>
+            <div><span class="text-gray-500">存储配额：</span>{{ user_obj.storage_quota|filesizeformat }}</div>
+            <div><span class="text-gray-500">当前组：</span>{{ user_obj.group.name|default:'无' }}</div>
+            <div>
+                <span class="text-gray-500">角色：</span>
+                {% if user_obj.is_superuser %}管理员{% elif user_obj.is_staff %}Staff{% else %}用户{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改用户组 -->
+    <form method="post" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-4">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="update_group">
+        <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3">修改用户组</h3>
+        <div class="flex items-center space-x-3">
+            <select name="group" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                <option value="">-- 无组 --</option>
+                {% for g in groups %}
+                <option value="{{ g.id }}" {% if user_obj.group == g %}selected{% endif %}>
+                    {{ g.name }} ({{ g.storage_quota|filesizeformat }})
+                </option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="px-4 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700">更新</button>
+        </div>
+    </form>
+
+    <!-- 管理员权限 -->
+    <form method="post" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="toggle_admin">
+        <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3">角色设置</h3>
+        {% if user_obj.is_superuser %}
+            {% if user_obj == request.user %}
+                <button type="submit"
+                        class="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700"
+                        onclick="return confirm('确定要移除自己的管理员权限吗？')">移除管理员权限</button>
+            {% else %}
+                <button type="submit" class="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700">移除管理员权限</button>
+            {% endif %}
+        {% else %}
+            <button type="submit" class="px-4 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700">设为管理员</button>
+        {% endif %}
+    </form>
+</div>
+{% endblock %}

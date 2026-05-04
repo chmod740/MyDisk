@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}站点设置{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <h1 class="text-2xl font-bold dark:text-white mb-6">站点设置</h1>
+
+    <form method="post" class="bg-white dark:bg-gray-800 dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 dark:border-gray-700 p-6 space-y-6">
+        {% csrf_token %}
+
+        <div>
+            <h3 class="text-lg font-semibold dark:text-white mb-3">基本设置</h3>
+            <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">网站名称</label>
+                <input type="text" name="site_name" value="{{ settings.site_name|default:'DjangoDisk' }}"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-primary-500">
+            </div>
+        </div>
+
+        <div>
+            <h3 class="text-lg font-semibold dark:text-white mb-3">注册设置</h3>
+            <label class="flex items-center mb-3">
+                <input type="checkbox" name="allow_registration" class="rounded mr-2"
+                       {% if settings.allow_registration %}checked{% endif %}>
+                <span class="text-sm dark:text-gray-300">允许用户注册</span>
+            </label>
+        </div>
+
+        <div>
+            <h3 class="text-lg font-semibold dark:text-white mb-3">验证码设置</h3>
+            <label class="flex items-center mb-3">
+                <input type="checkbox" name="require_captcha_register" class="rounded mr-2"
+                       {% if settings.require_captcha_register %}checked{% endif %}>
+                <span class="text-sm dark:text-gray-300">注册时需要验证码</span>
+            </label>
+            <label class="flex items-center">
+                <input type="checkbox" name="require_captcha_login" class="rounded mr-2"
+                       {% if settings.require_captcha_login %}checked{% endif %}>
+                <span class="text-sm dark:text-gray-300">登录时需要验证码</span>
+            </label>
+        </div>
+
+        <div>
+            <h3 class="text-lg font-semibold dark:text-white mb-3">默认存储配额</h3>
+            <div>
+                <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">无默认组时新用户的存储配额 (bytes)</label>
+                <input type="number" name="default_storage_quota" value="{{ settings.default_storage_quota }}" min="1"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-primary-500">
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">当前值: {{ settings.default_storage_quota|filesizeformat }} (默认 1GB = 1073741824)</p>
+            </div>
+        </div>
+
+        <div>
+            <h3 class="text-lg font-semibold dark:text-white mb-3">默认用户组</h3>
+            <select name="default_group" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm">
+                <option value="">-- 无默认组 --</option>
+                {% for g in groups %}
+                <option value="{{ g.id }}" {% if settings.default_group == g %}selected{% endif %}>
+                    {{ g.name }}（配额: {{ g.storage_quota|filesizeformat }}）{% if g.is_default %} [当前默认]{% endif %}
+                </option>
+                {% endfor %}
+            </select>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">新注册用户将自动加入该组并使用该组的存储配额</p>
+        </div>
+
+        <button type="submit" class="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">
+            保存设置
+        </button>
+    </form>
+</div>
+{% endblock %}

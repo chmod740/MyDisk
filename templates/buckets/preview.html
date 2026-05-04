@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}预览 - {{ file.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex items-center justify-between mb-4">
+        <h1 class="text-xl font-bold dark:text-white truncate">{{ file.name }}</h1>
+        <div class="flex items-center space-x-2">
+            <a href="{% url 'bucket_file_download' bucket.id file.id %}" class="px-4 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700">
+                下载
+            </a>
+            <a href="{% url 'bucket_detail' bucket.id %}{% if file.folder_path %}?path={{ file.folder_path }}{% endif %}"
+               class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700">
+                返回
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 dark:border-gray-700 p-6">
+        {% if preview_type == 'image' %}
+            <div class="flex justify-center">
+                <img src="{{ file.file.url }}" alt="{{ file.name }}" class="max-w-full max-h-[70vh] object-contain rounded-lg">
+            </div>
+        {% elif preview_type == 'text' %}
+            <pre class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-auto max-h-[70vh] text-sm"><code>{{ content }}</code></pre>
+        {% elif preview_type == 'pdf' %}
+            <iframe src="{{ file.file.url }}" class="w-full h-[70vh] rounded-lg border-0"></iframe>
+        {% else %}
+            <div class="text-center py-12">
+                <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <p class="text-gray-500">此文件类型不支持在线预览</p>
+                <p class="text-gray-400 dark:text-gray-500 text-sm mt-1">{{ file.mime_type }}</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="mt-4 text-sm text-gray-500 dark:text-gray-400 space-y-1">
+        <p>大小: {{ file.size|filesizeformat }}</p>
+        <p>类型: {{ file.mime_type }}</p>
+        <p>上传时间: {{ file.created_at|date:'Y-m-d H:i' }}</p>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}{% if group %}编辑组{% else %}创建用户组{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto">
+    <h1 class="text-2xl font-bold dark:text-white mb-6">{% if group %}编辑组: {{ group.name }}{% else %}创建用户组{% endif %}</h1>
+
+    <form method="post" class="bg-white dark:bg-gray-800 dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 dark:border-gray-700 p-6 space-y-4">
+        {% csrf_token %}
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">组名称</label>
+            <input type="text" name="name" value="{{ group.name|default:'' }}" required
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">存储配额 (bytes)</label>
+            <input type="number" name="quota" value="{{ group.storage_quota|default:'1073741824' }}" required min="1"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500">
+            <p class="text-xs text-gray-400 mt-1">默认 1GB = 1073741824 bytes</p>
+        </div>
+        <label class="flex items-center text-sm">
+            <input type="checkbox" name="is_default" class="rounded mr-2"
+                   {% if group and group.is_default %}checked{% endif %}>
+            <span class="text-sm dark:text-gray-300">设为默认组（新注册用户自动加入）</span>
+        </label>
+        <div class="flex justify-end space-x-2 pt-2">
+            <a href="{% url 'admin_group_list' %}" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700">取消</a>
+            <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700">
+                {% if group %}保存{% else %}创建{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

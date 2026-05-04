@@ -1,0 +1,500 @@
+<div id="file-list-content">
+    <!-- 面包屑 -->
+    <nav class="flex items-center space-x-1 text-sm text-gray-500 dark:text-gray-400 mb-4">
+        <a href="{% url 'file_list' %}"
+           hx-get="{% url 'file_list' %}" hx-target="#main-content" hx-push-url="true"
+           class="hover:text-primary-600">我的文件</a>
+        {% for ancestor in ancestors %}
+            <span>/</span>
+            <a href="{% url 'file_list' %}?folder={{ ancestor.id }}"
+               hx-get="{% url 'file_list' %}?folder={{ ancestor.id }}" hx-target="#main-content" hx-push-url="true"
+               class="hover:text-primary-600">{{ ancestor.name }}</a>
+        {% endfor %}
+        {% if folder %}
+            <span>/</span>
+            <span class="text-gray-900 dark:text-gray-100 font-medium">{{ folder.name }}</span>
+        {% endif %}
+    </nav>
+
+    <!-- 工具栏 -->
+    <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-2">
+            <!-- 新建文件夹 -->
+            <form method="post" action="{% url 'folder_create' %}" class="inline-flex" id="create-folder-form">
+                {% csrf_token %}
+                {% if folder %}<input type="hidden" name="parent" value="{{ folder.id }}">{% endif %}
+                <div class="relative" x-data="{ open: false }">
+                    <button type="button" @click="open = !open"
+                            class="px-3 py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                        </svg>
+                        新建文件夹
+                    </button>
+                    <div x-show="open" @click.outside="open = false"
+                         class="absolute left-0 mt-1 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-3 z-10">
+                        <input type="text" name="name" placeholder="文件夹名称" required
+                               class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg mb-2 focus:ring-2 focus:ring-primary-500">
+                        <button type="submit" class="w-full py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+                            创建
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- 上传按钮 -->
+            <div x-data="uploadHandler()" class="inline-flex">
+                <button @click="open = !open"
+                        class="px-3 py-1.5 text-sm bg-white dark:bg-gray-800 border border-gray-300 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 flex items-center">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                    </svg>
+                    上传
+                </button>
+                <div x-show="open" @click.outside="open = false"
+                     class="absolute mt-1 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4 z-10">
+                    <form id="upload-form" method="post" action="{% url 'file_upload' %}" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {% if folder %}<input type="hidden" name="folder" value="{{ folder.id }}">{% endif %}
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-primary-400 transition-colors"
+                             id="upload-drop-zone"
+                             :class="dragover ? 'border-primary-400 bg-primary-50' : 'border-gray-300'"
+                             @dragover.prevent="dragover = true"
+                             @dragleave.prevent="dragover = false"
+                             @drop.prevent="handleDrop($event)">
+                            <input type="file" name="files" multiple
+                                   class="hidden" id="file-input"
+                                   @change="handleFiles($el.files)">
+                            <label for="file-input" class="cursor-pointer">
+                                <svg class="w-10 h-10 mx-auto text-gray-400 dark:text-gray-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                </svg>
+                                <p class="text-sm text-gray-500 dark:text-gray-400" x-show="!uploading">点击选择或拖拽文件到此处</p>
+                                <p class="text-sm text-primary-600" x-show="uploading" x-text="statusText"></p>
+                                <div x-show="uploading" class="mt-2 w-full bg-gray-200 rounded-full h-1.5">
+                                    <div class="bg-primary-600 h-1.5 rounded-full transition-all" :style="'width:' + progress + '%'"></div>
+                                </div>
+                            </label>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {% if search %}
+            <a href="{{ request.path }}{% if request.GET.folder %}?folder={{ request.GET.folder }}{% endif %}"
+               hx-get="{{ request.path }}{% if request.GET.folder %}?folder={{ request.GET.folder }}{% endif %}"
+               hx-target="#main-content" hx-push-url="true"
+               class="px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">
+                &times; 清除搜索
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- 批量操作工具栏 -->
+        <div x-data="{ selected: [] }" class="flex items-center space-x-2">
+            <form id="batch-form" class="hidden">
+                {% csrf_token %}
+            </form>
+            <button type="button" @click="
+                const ids = [];
+                document.querySelectorAll('.item-checkbox:checked').forEach(cb => ids.push(cb.value));
+                if (!ids.length) { alert('请选择项目'); return; }
+                if (!confirm('确定删除选中的项目？')) return;
+                const form = document.getElementById('batch-delete-form');
+                form.querySelector('#batch-file-ids').value = ids.filter(v => v.startsWith('f:')).map(v => v.slice(2)).join(',');
+                form.querySelector('#batch-folder-ids').value = ids.filter(v => v.startsWith('d:')).map(v => v.slice(2)).join(',');
+                htmx.trigger(form, 'submit');
+            " class="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg">批量删除</button>
+        </div>
+    </div>
+
+    <!-- 批量删除表单 -->
+    <form id="batch-delete-form" method="post" action="{% url 'batch_delete' %}"
+          hx-post="{% url 'batch_delete' %}" hx-target="#main-content" hx-swap="none">
+        {% csrf_token %}
+        <input type="hidden" name="file_ids" id="batch-file-ids">
+        <input type="hidden" name="folder_ids" id="batch-folder-ids">
+    </form>
+
+    <!-- 排序 -->
+    <div class="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 mb-3">
+        <span>排序:</span>
+        {% with current_sort=sort %}
+        <a href="?{{ request.GET.urlencode|safe }}&sort=-created_at"
+           hx-get="{{ request.path }}?q={{ search }}&sort=-created_at{% if folder %}&folder={{ folder.id }}{% endif %}"
+           hx-target="#main-content" hx-push-url="true"
+           class="px-2 py-1 rounded {% if current_sort == '-created_at' %}bg-primary-100 text-primary-700{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">最新</a>
+        <a href="?{{ request.GET.urlencode|safe }}&sort=name"
+           hx-get="{{ request.path }}?q={{ search }}&sort=name{% if folder %}&folder={{ folder.id }}{% endif %}"
+           hx-target="#main-content" hx-push-url="true"
+           class="px-2 py-1 rounded {% if current_sort == 'name' %}bg-primary-100 text-primary-700{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">名称</a>
+        <a href="?{{ request.GET.urlencode|safe }}&sort=-size"
+           hx-get="{{ request.path }}?q={{ search }}&sort=-size{% if folder %}&folder={{ folder.id }}{% endif %}"
+           hx-target="#main-content" hx-push-url="true"
+           class="px-2 py-1 rounded {% if current_sort == '-size' %}bg-primary-100 text-primary-700{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">大小</a>
+        {% endwith %}
+    </div>
+
+    <!-- 文件/文件夹表格 -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                <tr>
+                    <th class="w-10 px-4 py-2">
+                        <input type="checkbox" class="item-checkbox-all rounded" @change="
+                            document.querySelectorAll('.item-checkbox').forEach(cb => cb.checked = $event.target.checked)">
+                    </th>
+                    <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">名称</th>
+                    <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase hidden md:table-cell">大小</th>
+                    <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase hidden md:table-cell">修改时间</th>
+                    <th class="text-right px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">操作</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                {% if not folders and not files_page %}
+                <tr>
+                    <td colspan="5" class="px-4 py-12 text-center text-gray-400 dark:text-gray-500">
+                        <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                        </svg>
+                        <p>此文件夹为空</p>
+                    </td>
+                </tr>
+                {% endif %}
+
+                {% for f in folders %}
+                <tr class="hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 group" data-item-type="folder" data-item-id="{{ f.id }}" data-item-name="{{ f.name }}">
+                    <td class="px-4 py-2">
+                        <input type="checkbox" class="item-checkbox" value="d:{{ f.id }}">
+                    </td>
+                    <td class="px-4 py-2">
+                        <a href="{% url 'file_list' %}?folder={{ f.id }}"
+                           hx-get="{% url 'file_list' %}?folder={{ f.id }}" hx-target="#main-content" hx-push-url="true"
+                           class="flex items-center text-sm hover:text-primary-600 dark:text-gray-200">
+                            <svg class="w-5 h-5 mr-2 text-yellow-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
+                            </svg>
+                            {{ f.name }}
+                        </a>
+                    </td>
+                    <td class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">-</td>
+                    <td class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">{{ f.updated_at|date:'Y-m-d H:i' }}</td>
+                    <td class="px-4 py-2 text-right">
+                        <div class="flex items-center justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button hx-get="{% url 'folder_rename' f.id %}" hx-target="#modal-container" hx-swap="innerHTML"
+                                    class="p-1 text-gray-400 dark:text-gray-500 hover:text-primary-600 text-xs" title="重命名">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                </svg>
+                            </button>
+                            <button hx-get="{% url 'folder_delete' f.id %}" hx-target="#modal-container" hx-swap="innerHTML"
+                                    class="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600 text-xs" title="删除">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                            </button>
+                            <button class="p-1 text-gray-400 dark:text-gray-500 hover:text-primary-600 text-xs" title="分享"
+                                    hx-get="{% url 'share_create' %}?folder_id={{ f.id }}" hx-target="#modal-container" hx-swap="innerHTML">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+
+                {% for f in files_page %}
+                <tr class="hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 group" data-item-type="file" data-item-id="{{ f.id }}" data-item-name="{{ f.name }}">
+                    <td class="px-4 py-2">
+                        <input type="checkbox" class="item-checkbox" value="f:{{ f.id }}">
+                    </td>
+                    <td class="px-4 py-2">
+                        <a href="{% url 'file_preview' f.id %}"
+                           hx-get="{% url 'file_preview' f.id %}" hx-target="#modal-container" hx-swap="innerHTML"
+                           class="flex items-center text-sm hover:text-primary-600 dark:text-gray-200">
+                            {% if f.is_image %}
+                            <svg class="w-5 h-5 mr-2 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            {% elif f.is_pdf %}
+                            <svg class="w-5 h-5 mr-2 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                            </svg>
+                            {% else %}
+                            <svg class="w-5 h-5 mr-2 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            {% endif %}
+                            {{ f.name }}
+                        </a>
+                    </td>
+                    <td class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">
+                        {% if f.size < 1024 %}
+                            {{ f.size }} B
+                        {% elif f.size < 1048576 %}
+                            {% widthratio f.size 1024 1 %} KB
+                        {% else %}
+                            {% widthratio f.size 1048576 1 %} MB
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">{{ f.updated_at|date:'Y-m-d H:i' }}</td>
+                    <td class="px-4 py-2 text-right">
+                        <div class="flex items-center justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <a href="{% url 'file_download' f.id %}"
+                               class="p-1 text-gray-400 dark:text-gray-500 hover:text-primary-600 text-xs" title="下载">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                </svg>
+                            </a>
+                            <button hx-get="{% url 'file_rename' f.id %}" hx-target="#modal-container" hx-swap="innerHTML"
+                                    class="p-1 text-gray-400 dark:text-gray-500 hover:text-primary-600 text-xs" title="重命名">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                </svg>
+                            </button>
+                            <button hx-get="{% url 'file_move' f.id %}" hx-target="#modal-container" hx-swap="innerHTML"
+                                    class="p-1 text-gray-400 dark:text-gray-500 hover:text-primary-600 text-xs" title="移动">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                                </svg>
+                            </button>
+                            <button hx-get="{% url 'file_delete' f.id %}" hx-target="#modal-container" hx-swap="innerHTML"
+                                    class="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600 text-xs" title="删除">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                            </button>
+                            <button onclick="navigator.clipboard.writeText('{{ request.build_absolute_uri }}')"
+                                    class="p-1 text-gray-400 dark:text-gray-500 hover:text-primary-600 text-xs" title="分享"
+                                    hx-get="{% url 'share_create' %}?file_id={{ f.id }}" hx-target="#modal-container" hx-swap="innerHTML">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 分页 -->
+    {% if files_page.paginator.num_pages > 1 %}
+    <div class="flex justify-center mt-4 space-x-1">
+        {% if files_page.has_previous %}
+        <a href="?page={{ files_page.previous_page_number }}&sort={{ sort }}{% if search %}&q={{ search }}{% endif %}{% if folder %}&folder={{ folder.id }}{% endif %}"
+           hx-get="?page={{ files_page.previous_page_number }}&sort={{ sort }}{% if search %}&q={{ search }}{% endif %}{% if folder %}&folder={{ folder.id }}{% endif %}"
+           hx-target="#main-content" hx-push-url="true"
+           class="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700">上一页</a>
+        {% endif %}
+        <span class="px-3 py-1 text-sm text-gray-500 dark:text-gray-400">
+            {{ files_page.number }} / {{ files_page.paginator.num_pages }}
+        </span>
+        {% if files_page.has_next %}
+        <a href="?page={{ files_page.next_page_number }}&sort={{ sort }}{% if search %}&q={{ search }}{% endif %}{% if folder %}&folder={{ folder.id }}{% endif %}"
+           hx-get="?page={{ files_page.next_page_number }}&sort={{ sort }}{% if search %}&q={{ search }}{% endif %}{% if folder %}&folder={{ folder.id }}{% endif %}"
+           hx-target="#main-content" hx-push-url="true"
+           class="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700">下一页</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- 模态框容器 -->
+<div id="modal-container"></div>
+
+<!-- 右键菜单 -->
+<div id="context-menu" class="fixed hidden bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50 min-w-[160px]" style="display:none;">
+    <a href="#" data-action="preview" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 flex items-center">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+        预览
+    </a>
+    <a href="#" data-action="download" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 flex items-center">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+        下载
+    </a>
+    <a href="#" data-action="rename" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 flex items-center">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+        重命名
+    </a>
+    <a href="#" data-action="move" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 flex items-center">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+        移动
+    </a>
+    <a href="#" data-action="share" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 flex items-center">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+        分享
+    </a>
+    <hr class="my-1">
+    <a href="#" data-action="delete" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        删除
+    </a>
+</div>
+
+<script>
+// ── 文件上传处理 ──
+function uploadHandler() {
+    return {
+        open: false,
+        dragover: false,
+        uploading: false,
+        progress: 0,
+        statusText: '正在上传...',
+        async doUpload(files) {
+            if (!files || files.length === 0) return;
+            const formData = new FormData();
+            for (const f of files) formData.append('files', f);
+            const folderInput = document.querySelector('#upload-form input[name="folder"]');
+            if (folderInput) formData.append('folder', folderInput.value);
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+            this.uploading = true;
+            this.progress = 0;
+            this.statusText = `上传中 (${files.length} 个文件)...`;
+
+            const doSend = async (fd) => {
+                try {
+                    const resp = await fetch('{% url "file_upload" %}', { method: 'POST', body: fd,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                    if (resp.status === 409) {
+                        const data = await resp.json();
+                        if (data.conflicts) {
+                            showConflictDialog(data.conflicts, fd, (newFd) => doSend(newFd));
+                            return;
+                        }
+                    }
+                    if (resp.ok) {
+                        this.statusText = '上传完成！';
+                        this.progress = 100;
+                        this.open = false;
+                        this.uploading = false;
+                        window.location.reload();
+                    } else {
+                        this.statusText = '上传失败';
+                        this.uploading = false;
+                    }
+                } catch(e) {
+                    this.statusText = '上传出错: ' + e.message;
+                    this.uploading = false;
+                }
+            };
+            doSend(formData);
+        },
+        handleDrop(e) {
+            e.stopPropagation(); // 阻止冒泡到页面级drop处理
+            this.dragover = false;
+            this.doUpload(e.dataTransfer.files);
+        },
+        handleFiles(files) {
+            this.doUpload(files);
+        }
+    }
+}
+
+// ── 页面级拖拽上传区 ──
+(function() {
+    let dragCounter = 0;
+    const dropOverlay = document.createElement('div');
+    dropOverlay.id = 'page-drop-overlay';
+    dropOverlay.innerHTML = '<div class="border-4 border-dashed border-primary-400 rounded-2xl bg-primary-50/90 flex items-center justify-center" style="position:fixed;inset:20px;z-index:999;pointer-events:none;"><div class="text-center"><svg class="w-16 h-16 mx-auto text-primary-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg><p class="text-primary-600 text-lg font-medium">释放文件以上传</p></div></div>';
+    dropOverlay.style.display = 'none';
+    document.body.appendChild(dropOverlay);
+
+    document.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        if (dragCounter === 0) dropOverlay.style.display = 'block';
+    });
+    document.addEventListener('dragenter', function(e) { e.preventDefault(); dragCounter++; });
+    document.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        dragCounter--;
+        if (dragCounter <= 0) { dragCounter = 0; dropOverlay.style.display = 'none'; }
+    });
+    document.addEventListener('drop', function(e) {
+        e.preventDefault();
+        dragCounter = 0;
+        dropOverlay.style.display = 'none';
+        // 跳过上传弹窗内部的拖拽（已由uploadHandler处理）
+        if (e.target.closest('#upload-drop-zone') || e.target.closest('#upload-form')) return;
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const formData = new FormData();
+            for (const f of files) formData.append('files', f);
+            const folderInput = document.querySelector('#upload-form input[name="folder"]');
+            if (folderInput) formData.append('folder', folderInput.value);
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+            const doSend = (fd) => {
+                fetch('{% url "file_upload" %}', { method: 'POST', body: fd,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                }).then(async r => {
+                    if (r.status === 409) {
+                        const data = await r.json();
+                        if (data.conflicts) showConflictDialog(data.conflicts, fd, (newFd) => doSend(newFd));
+                    } else if (r.ok) {
+                        window.location.reload();
+                    }
+                });
+            };
+            doSend(formData);
+        }
+    });
+})();
+
+// ── 右键菜单 ──
+(function() {
+    const menu = document.getElementById('context-menu');
+    let currentItem = null; // {type: 'file'|'folder', id, name}
+
+    document.addEventListener('contextmenu', function(e) {
+        const row = e.target.closest('tr[data-item-type]');
+        if (!row) return;
+        e.preventDefault();
+        currentItem = { type: row.dataset.itemType, id: row.dataset.itemId, name: row.dataset.itemName || '' };
+
+        // 调整菜单项
+        menu.querySelector('[data-action="preview"]').style.display = currentItem.type === 'file' ? '' : 'none';
+        const renameBtn = menu.querySelector('[data-action="rename"]');
+        renameBtn.innerHTML = renameBtn.innerHTML; // reset
+
+        menu.style.display = 'block';
+        menu.style.left = Math.min(e.clientX, window.innerWidth - 180) + 'px';
+        menu.style.top = Math.min(e.clientY, window.innerHeight - 220) + 'px';
+    });
+
+    document.addEventListener('click', function() { menu.style.display = 'none'; });
+
+    menu.addEventListener('click', function(e) {
+        e.preventDefault();
+        const action = e.target.closest('[data-action]')?.dataset?.action;
+        if (!action || !currentItem) return;
+        menu.style.display = 'none';
+
+        const t = currentItem.type;
+        const id = currentItem.id;
+        const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        if (action === 'preview') {
+            htmx.ajax('GET', '/files/' + id + '/preview/', { target: '#modal-container', swap: 'innerHTML' });
+        } else if (action === 'download') {
+            if (t === 'file') window.location.href = '/files/' + id + '/download/';
+        } else if (action === 'rename') {
+            const url = t === 'folder' ? '/files/folder/' + id + '/rename/' : '/files/' + id + '/rename/';
+            htmx.ajax('GET', url, { target: '#modal-container', swap: 'innerHTML' });
+        } else if (action === 'move') {
+            if (t === 'file') htmx.ajax('GET', '/files/' + id + '/move/', { target: '#modal-container', swap: 'innerHTML' });
+        } else if (action === 'share') {
+            if (t === 'file') {
+                htmx.ajax('GET', '/share/create/?file_id=' + id, { target: '#modal-container', swap: 'innerHTML' });
+            } else if (t === 'folder') {
+                htmx.ajax('GET', '/share/create/?folder_id=' + id, { target: '#modal-container', swap: 'innerHTML' });
+            }
+        } else if (action === 'delete') {
+            const url = t === 'folder' ? '/files/folder/' + id + '/delete/' : '/files/' + id + '/delete/';
+            htmx.ajax('GET', url, { target: '#modal-container', swap: 'innerHTML' });
+        }
+    });
+})();
+</script>

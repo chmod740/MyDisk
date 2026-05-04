@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}我的文件{% endblock %}
+
+{% block search %}
+<form method="get" class="ml-8" hx-get="{{ request.path }}" hx-target="#main-content" hx-push-url="true">
+    {% if request.GET.folder %}<input type="hidden" name="folder" value="{{ request.GET.folder }}">{% endif %}
+    <input type="text" name="q" value="{{ search }}" placeholder="搜索文件..."
+           class="w-64 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+</form>
+{% endblock %}
+
+{% block content %}
+<div id="file-list-content">
+    {% include 'files/_file_list_content.html' %}
+</div>
+{% endblock %}

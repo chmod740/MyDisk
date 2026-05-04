@@ -1,0 +1,61 @@
+{% if tree_link_prefix %}
+    {# Bucket folder tree — uses path param #}
+    {% if node.children %}
+    <div x-data="{ open: {% if current_folder and current_folder.id == node.id %}true{% else %}false{% endif %} }">
+        <div class="flex items-center justify-between px-3 py-1.5 text-sm rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+            <a href="{{ tree_link_prefix }}?path={{ node.id }}"
+               hx-get="{{ tree_link_prefix }}?path={{ node.id }}" hx-target="#main-content" hx-push-url="true"
+               class="flex-1 truncate text-xs {% if current_folder and current_folder.id == node.id %}text-primary-700 font-medium{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                📁 {{ node.name }}
+            </a>
+            <button @click="open = !open" class="text-gray-400 hover:text-gray-600 ml-1 flex-shrink-0">
+                <svg x-show="!open" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                <svg x-show="open" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+        </div>
+        <div x-show="open" class="ml-3">
+            {% for child in node.children %}
+                {% include 'files/_tree_node.html' with node=child current_folder=current_folder tree_link_prefix=tree_link_prefix %}
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="px-3 py-1.5 text-sm">
+        <a href="{{ tree_link_prefix }}?path={{ node.id }}"
+           hx-get="{{ tree_link_prefix }}?path={{ node.id }}" hx-target="#main-content" hx-push-url="true"
+           class="block truncate text-xs {% if current_folder and current_folder.id == node.id %}text-primary-700 font-medium{% else %}text-gray-700 dark:text-gray-300{% endif %} hover:text-primary-600">
+            📁 {{ node.name }}
+        </a>
+    </div>
+    {% endif %}
+{% else %}
+    {# File folder tree — uses folder param #}
+    {% if node.children %}
+    <div x-data="{ open: {% if current_folder and current_folder.id == node.id %}true{% else %}false{% endif %} }">
+        <div class="flex items-center justify-between px-3 py-1.5 text-sm rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+            <a href="{% url 'file_list' %}?folder={{ node.id }}"
+               hx-get="{% url 'file_list' %}?folder={{ node.id }}" hx-target="#main-content" hx-push-url="true"
+               class="flex-1 truncate text-xs {% if current_folder and current_folder.id == node.id %}text-primary-700 font-medium{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+                📁 {{ node.name }}
+            </a>
+            <button @click="open = !open" class="text-gray-400 hover:text-gray-600 ml-1 flex-shrink-0">
+                <svg x-show="!open" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                <svg x-show="open" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+        </div>
+        <div x-show="open" class="ml-3">
+            {% for child in node.children %}
+                {% include 'files/_tree_node.html' with node=child current_folder=current_folder %}
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="px-3 py-1.5 text-sm">
+        <a href="{% url 'file_list' %}?folder={{ node.id }}"
+           hx-get="{% url 'file_list' %}?folder={{ node.id }}" hx-target="#main-content" hx-push-url="true"
+           class="block truncate text-xs {% if current_folder and current_folder.id == node.id %}text-primary-700 font-medium{% else %}text-gray-700 dark:text-gray-300{% endif %} hover:text-primary-600">
+            📁 {{ node.name }}
+        </a>
+    </div>
+    {% endif %}
+{% endif %}

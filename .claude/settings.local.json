@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(lsof -ti:8000)",
+      "Bash(xargs kill *)",
+      "Bash(python manage.py shell)",
+      "Bash(rm -f accounts/migrations/0*.py buckets/migrations/0*.py files/migrations/0*.py sharing/migrations/0*.py)",
+      "Bash(touch accounts/migrations/__init__.py buckets/migrations/__init__.py files/migrations/__init__.py sharing/migrations/__init__.py)",
+      "Bash(rm -rf media/*/)",
+      "Bash(rm -f db.sqlite3)",
+      "Bash(python manage.py makemigrations accounts buckets files sharing)",
+      "Bash(python manage.py migrate)"
+    ]
+  }
+}

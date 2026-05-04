@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}个人中心{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <h1 class="text-2xl font-bold dark:text-white mb-6">个人中心</h1>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+        <h2 class="text-lg font-semibold dark:text-white mb-4">基本信息</h2>
+        <div class="grid grid-cols-2 gap-4 text-sm">
+            <div>
+                <span class="text-gray-500">用户名</span>
+                <p class="font-medium">{{ user.username }}</p>
+            </div>
+            <div>
+                <span class="text-gray-500">邮箱</span>
+                <p class="font-medium">{{ user.email|default:'未设置' }}</p>
+            </div>
+            <div>
+                <span class="text-gray-500">注册时间</span>
+                <p class="font-medium">{{ user.date_joined|date:'Y-m-d H:i' }}</p>
+            </div>
+            <div>
+                <span class="text-gray-500">文件数</span>
+                <p class="font-medium">{{ files_count }}</p>
+            </div>
+            <div>
+                <span class="text-gray-500">文件夹数</span>
+                <p class="font-medium">{{ folders_count }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <h2 class="text-lg font-semibold dark:text-white mb-4">存储使用情况</h2>
+        <div class="mb-2 flex justify-between text-sm">
+            <span class="text-gray-500">{{ storage_used_display }}</span>
+            <span class="text-gray-500">{{ storage_quota_display }}</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-3">
+            <div class="bg-primary-600 h-3 rounded-full transition-all" style="width: {{ usage_percent }}%"></div>
+        </div>
+        <p class="text-xs text-gray-400 mt-2">已使用 {{ usage_percent }}%</p>
+    </div>
+</div>
+{% endblock %}

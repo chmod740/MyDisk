@@ -1,0 +1,295 @@
+{% extends 'base.html' %}
+{% block title %}桶: {{ bucket.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <!-- 头部 -->
+    <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-3">
+            <a href="{% url 'bucket_list' %}" class="text-gray-400 hover:text-gray-600">&larr;</a>
+            <h1 class="text-xl font-bold dark:text-white">{{ bucket.name }}</h1>
+            <span class="text-xs px-2 py-0.5 rounded-full {% if bucket.is_public %}bg-green-100 text-green-700{% else %}bg-gray-100 text-gray-600{% endif %}">
+                {% if bucket.is_public %}🌐 公开{% else %}🔒 私有{% endif %}
+            </span>
+        </div>
+        {% if is_owner %}
+        <form method="post" action="{% url 'bucket_delete' bucket.id %}"
+              onsubmit="return confirm('确定删除此桶及其所有文件？')">
+            {% csrf_token %}
+            <button class="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg">删除桶</button>
+        </form>
+        {% endif %}
+    </div>
+
+    <!-- 公开链接提示 -->
+    {% if bucket.is_public and is_owner %}
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm">
+        <span class="text-blue-700">公开链接：</span>
+        <code class="text-blue-600">{{ request.scheme }}://{{ request.get_host }}{% url 'bucket_detail' bucket.id %}</code>
+        <button onclick="navigator.clipboard.writeText('{{ request.scheme }}://{{ request.get_host }}{% url 'bucket_detail' bucket.id %}')" class="ml-2 text-blue-500 hover:underline text-xs">复制</button>
+    </div>
+    {% endif %}
+
+    <!-- 面包屑 -->
+    {% if breadcrumbs %}
+    <nav class="flex items-center space-x-1 text-sm text-gray-500 dark:text-gray-400 mb-4">
+        <a href="{% url 'bucket_detail' bucket.id %}" class="hover:text-primary-600">📦 {{ bucket.name }}</a>
+        {% for bc in breadcrumbs %}<span>/</span><a href="{% url 'bucket_detail' bucket.id %}?path={{ bc.path }}" class="hover:text-primary-600">{{ bc.name }}</a>{% endfor %}
+    </nav>
+    {% endif %}
+
+    <!-- 工具栏 — 与我的文件保持一致 -->
+    {% if is_owner %}
+    <div class="flex items-center space-x-2 mb-4">
+        <!-- 新建目录 — 与我的文件新建文件夹一致 -->
+        <div x-data="{ open: false }" class="relative">
+            <button @click="open = !open" class="px-3 py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>新建目录
+            </button>
+            <div x-show="open" @click.outside="open = false" class="absolute left-0 mt-1 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-3 z-10">
+                <form method="post" action="{% url 'bucket_folder_create' bucket.id %}">
+                    {% csrf_token %}<input type="hidden" name="parent_path" value="{{ current_path }}">
+                    <input type="text" name="name" placeholder="目录名称" required class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg mb-2 focus:ring-2 focus:ring-primary-500">
+                    <button type="submit" class="w-full py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700">创建</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 上传按钮 — 与我的文件上传按钮完全一致 -->
+        <div x-data="bucketUploadHandler()" class="inline-flex">
+            <button @click="open = !open" class="px-3 py-1.5 text-sm bg-white dark:bg-gray-800 border border-gray-300 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 flex items-center">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>上传
+            </button>
+            <div x-show="open" @click.outside="open = false" class="absolute mt-1 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4 z-10">
+                <form id="bucket-upload-form" method="post" action="{% url 'bucket_file_upload' bucket.id %}" enctype="multipart/form-data">
+                    {% csrf_token %}<input type="hidden" name="folder_path" value="{{ current_path }}">
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-primary-400 transition-colors"
+                         id="bucket-upload-drop-zone"
+                         :class="dragover ? 'border-primary-400 bg-primary-50' : 'border-gray-300'"
+                         @dragover.prevent="dragover = true"
+                         @dragleave.prevent="dragover = false"
+                         @drop.prevent="handleDrop($event)">
+                        <input type="file" name="files" multiple class="hidden" id="bucket-file-input" @change="handleFiles($el.files)">
+                        <label for="bucket-file-input" class="cursor-pointer">
+                            <svg class="w-10 h-10 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                            <p class="text-sm text-gray-500" x-show="!uploading">点击选择或拖拽文件到此处</p>
+                            <p class="text-sm text-primary-600" x-show="uploading" x-text="statusText"></p>
+                            <div x-show="uploading" class="mt-2 w-full bg-gray-200 rounded-full h-1.5"><div class="bg-primary-600 h-1.5 rounded-full transition-all" :style="'width:' + progress + '%'"></div></div>
+                        </label>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 统一列表：目录 + 文件 -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        {% if not files and not subfolders %}
+        <div class="px-4 py-12 text-center text-gray-400"><p>桶中暂无文件</p></div>
+        {% else %}
+        <table class="w-full">
+            <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                <tr>
+                    <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">名称</th>
+                    <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase hidden md:table-cell">大小</th>
+                    <th class="text-left px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase hidden md:table-cell">修改时间</th>
+                    <th class="text-right px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">操作</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                <!-- 目录行 — 与我的文件文件夹行一致 -->
+                {% for sf in subfolders %}
+                <tr class="hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 group" data-item-type="bucketfolder" data-item-path="{{ current_path }}{{ sf }}/">
+                    <td class="px-4 py-2">
+                        <a href="{% url 'bucket_detail' bucket.id %}?path={{ current_path }}{{ sf }}/" class="flex items-center text-sm hover:text-primary-600 dark:text-gray-200">
+                            <svg class="w-5 h-5 mr-2 text-yellow-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+                            {{ sf }}
+                        </a>
+                    </td>
+                    <td class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">-</td>
+                    <td class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">-</td>
+                    <td class="px-4 py-2"></td>
+                </tr>
+                {% endfor %}
+
+                <!-- 文件行 — 与我的文件文件行一致 -->
+                {% for f in files %}
+                {% if f.name != '.keep' %}
+                <tr class="hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 group" data-item-type="bucketfile" data-item-id="{{ f.id }}" data-item-name="{{ f.name }}">
+                    <td class="px-4 py-2">
+                        <a href="{% url 'bucket_file_preview' bucket.id f.id %}"
+                           hx-get="{% url 'bucket_file_preview' bucket.id f.id %}" hx-target="#modal-container" hx-swap="innerHTML"
+                           class="flex items-center text-sm hover:text-primary-600 dark:text-gray-200">
+                            {% if f.is_image %}
+                            <svg class="w-5 h-5 mr-2 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            {% elif f.mime_type == 'application/pdf' %}
+                            <svg class="w-5 h-5 mr-2 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                            {% else %}
+                            <svg class="w-5 h-5 mr-2 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            {% endif %}
+                            {{ f.name }}
+                        </a>
+                    </td>
+                    <td class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">{% if f.size < 1048576 %}{% widthratio f.size 1024 1 %} KB{% else %}{% widthratio f.size 1048576 1 %} MB{% endif %}</td>
+                    <td class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">{{ f.created_at|date:'Y-m-d H:i' }}</td>
+                    <td class="px-4 py-2 text-right">
+                        <div class="flex items-center justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <a href="{% url 'bucket_file_download' bucket.id f.id %}" class="p-1 text-gray-400 hover:text-primary-600 text-xs" title="下载">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            </a>
+                            {% if is_owner %}
+                            <form method="post" action="{% url 'bucket_file_delete' bucket.id f.id %}" class="inline" onsubmit="return confirm('确定删除此文件？')">
+                                {% csrf_token %}
+                                <button class="p-1 text-gray-400 hover:text-red-600 text-xs" title="删除">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 右键菜单 -->
+<div id="bucket-context-menu" class="fixed hidden bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50 min-w-[180px]" style="display:none;">
+    <!-- 文件操作 -->
+    <a href="#" data-action="preview" data-show="bucketfile" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">预览</a>
+    <a href="#" data-action="download" data-show="bucketfile" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">下载</a>
+    <a href="#" data-action="copy-link" data-show="bucketfile" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">复制下载链接</a>
+    <a href="#" data-action="rename-file" data-show="bucketfile" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">重命名</a>
+    <!-- 目录操作 -->
+    <a href="#" data-action="rename-folder" data-show="bucketfolder" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">重命名</a>
+    <hr class="my-1">
+    <a href="#" data-action="delete-file" data-show="bucketfile" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center">删除</a>
+    <a href="#" data-action="delete-folder" data-show="bucketfolder" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center">删除目录</a>
+</div>
+
+<script>
+// 桶上传处理 — 与我的文件 uploadHandler 一致
+function bucketUploadHandler() {
+    return {
+        open: false, dragover: false, uploading: false, progress: 0, statusText: '正在上传...',
+        async doUpload(files) {
+            if (!files || files.length === 0) return;
+            const fd = new FormData();
+            for (const f of files) fd.append('files', f);
+            fd.append('folder_path', '{{ current_path }}');
+            fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            this.uploading = true; this.progress = 0; this.statusText = `上传中 (${files.length} 个文件)...`;
+            const send = async (formData) => {
+                const resp = await fetch('{% url "bucket_file_upload" bucket.id %}', {method:'POST', body:formData});
+                if (resp.status === 409) {
+                    const d = await resp.json();
+                    if (d.conflicts) { showConflictDialog(d.conflicts, formData, (newFd) => send(newFd)); return; }
+                }
+                if (resp.ok || resp.redirected) {
+                    this.statusText = '上传完成！'; this.progress = 100; this.open = false; this.uploading = false;
+                    location.reload();
+                } else { this.statusText = '上传失败'; this.uploading = false; }
+            };
+            send(fd);
+        },
+        handleDrop(e) { e.stopPropagation(); this.dragover = false; this.doUpload(e.dataTransfer.files); },
+        handleFiles(files) { this.doUpload(files); }
+    }
+}
+
+// 右键菜单
+(function() {
+    const menu = document.getElementById('bucket-context-menu'); let cur = null;
+    document.addEventListener('contextmenu', function(e) {
+        const row = e.target.closest('[data-item-type]');
+        if (!row) { menu.style.display = 'none'; return; }
+        e.preventDefault();
+        const itemType = row.dataset.itemType;
+        cur = { type: itemType, id: row.dataset.itemId, name: row.dataset.itemName, path: row.dataset.itemPath };
+
+        menu.querySelectorAll('[data-show]').forEach(el => {
+            el.style.display = el.dataset.show === itemType ? '' : 'none';
+        });
+
+        menu.style.display = 'block';
+        menu.style.left = Math.min(e.clientX, window.innerWidth - 200) + 'px';
+        menu.style.top = Math.min(e.clientY, window.innerHeight - (itemType === 'folder' ? 180 : 220)) + 'px';
+    });
+    document.addEventListener('click', function() { menu.style.display = 'none'; });
+    menu.addEventListener('click', async function(e) {
+        e.preventDefault();
+        const action = e.target.closest('[data-action]')?.dataset?.action;
+        if (!action || !cur) return; menu.style.display = 'none';
+        const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        if (action === 'preview') {
+            htmx.ajax('GET', '/buckets/{{ bucket.id }}/files/' + cur.id + '/preview/', {target:'#modal-container', swap:'innerHTML'});
+        } else if (action === 'download') {
+            window.location.href = '/buckets/{{ bucket.id }}/files/' + cur.id + '/download/';
+        } else if (action === 'copy-link') {
+            try {
+                const resp = await fetch('/buckets/{{ bucket.id }}/files/' + cur.id + '/download-url/');
+                const data = await resp.json();
+                await navigator.clipboard.writeText(data.url);
+                showToast('下载链接已复制', 'success');
+            } catch(ex) { showToast('获取失败: ' + ex.message, 'error'); }
+        } else if (action === 'delete-file') {
+            if (confirm('确定删除 "' + cur.name + '"？')) {
+                const f = document.createElement('form');
+                f.method='POST'; f.action='/buckets/{{ bucket.id }}/files/' + cur.id + '/delete/';
+                f.innerHTML='{% csrf_token %}'; document.body.appendChild(f); f.submit();
+            }
+        } else if (action === 'rename-file') {
+            const newName = prompt('重命名文件:', cur.name);
+            if (newName && newName !== cur.name) {
+                const resp = await fetch('/buckets/{{ bucket.id }}/files/' + cur.id + '/rename/', {
+                    method: 'POST',
+                    headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: 'name=' + encodeURIComponent(newName)
+                });
+                if (resp.status === 409) {
+                    showToast('文件 "' + newName + '" 已存在', 'error');
+                } else if (resp.ok) {
+                    showToast('重命名成功', 'success');
+                    location.reload();
+                } else {
+                    const msg = await resp.text();
+                    showToast(msg || '重命名失败', 'error');
+                }
+            }
+        } else if (action === 'rename-folder') {
+            const newName = prompt('重命名目录:', cur.name);
+            if (newName && newName !== cur.name) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/buckets/{{ bucket.id }}/folder/rename/';
+                form.innerHTML = '{% csrf_token %}<input type="hidden" name="old_path" value="' + cur.path + '"><input type="hidden" name="new_name" value="' + newName + '"><input type="hidden" name="parent_path" value="{{ current_path }}">';
+                document.body.appendChild(form); form.submit();
+            }
+        } else if (action === 'delete-folder') {
+            if (confirm('确定删除目录 "' + cur.name + '" 及其所有文件？此操作不可恢复。')) {
+                // 删除该目录下的所有文件
+                const resp = await fetch(location.href, {headers:{'X-CSRFToken': csrf}});
+                const html = await resp.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const fileRows = doc.querySelectorAll('[data-item-type="bucketfile"]');
+                for (const r of fileRows) {
+                    await fetch('/buckets/{{ bucket.id }}/files/' + r.dataset.itemId + '/delete/', {
+                        method: 'POST', headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded'}, body: ''
+                    });
+                }
+                location.reload();
+            }
+        }
+    });
+})();
+</script>
+
+<!-- 模态框容器 -->
+<div id="modal-container"></div>
+{% endblock %}

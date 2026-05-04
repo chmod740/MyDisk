@@ -1,0 +1,16 @@
+<div class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50" @click.self="$el.remove()">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-96">
+        <h3 class="text-lg font-semibold dark:text-white mb-2">删除文件夹</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">确定要删除 "{{ folder.name }}" 及其所有内容吗？将被移至回收站。</p>
+        <p class="text-xs text-yellow-600 dark:text-yellow-500 mb-4">⚠ 此目录及其子目录中的所有分享链接将被取消。</p>
+        <form method="post" action="{% url 'folder_delete' folder.id %}"
+              hx-post="{% url 'folder_delete' folder.id %}" hx-target="#modal-container" hx-swap="outerHTML">
+            {% csrf_token %}
+            <div class="flex justify-end space-x-2">
+                <button type="button" @click="$el.closest('.fixed').remove()"
+                        class="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">取消</button>
+                <button type="submit" class="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700">删除</button>
+            </div>
+        </form>
+    </div>
+</div>

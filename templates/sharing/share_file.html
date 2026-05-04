@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="h-full">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ file.name }} - {{ site_name }} 分享</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: "class", theme: { extend: { colors: { primary: { 50: "#eff6ff", 100: "#dbeafe", 200: "#bfdbfe", 300: "#93c5fd", 400: "#60a5fa", 500: "#3b82f6", 600: "#2563eb", 700: "#1d4ed8" } } } }, darkMode: 'class' };
+        if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
+    </script>
+</head>
+<body class="h-full bg-gray-50 dark:bg-gray-900">
+    <div class="max-w-3xl mx-auto py-8 px-4">
+        <!-- 头部 -->
+        <div class="text-center mb-6">
+            <div class="text-sm text-gray-400 dark:text-gray-500 mb-1">{{ link.owner.username }} 分享的文件</div>
+            <h1 class="text-2xl font-bold dark:text-white">{{ file.name }}</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                {{ file.size|filesizeformat }} &middot; {{ file.mime_type }}
+            </p>
+        </div>
+
+        <!-- 预览 -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+            {% if file.is_image %}
+                <img src="{{ file.file.url }}" alt="{{ file.name }}" class="max-w-full max-h-[55vh] mx-auto rounded-lg">
+            {% elif file.is_pdf %}
+                <iframe src="{{ file.file.url }}" class="w-full h-[55vh] rounded-lg border-0"></iframe>
+            {% elif file.is_text %}
+                <pre class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-auto max-h-[55vh] text-sm"><code>文本文件 — 请下载后查看</code></pre>
+            {% else %}
+                <div class="text-center py-16">
+                    <svg class="w-20 h-20 mx-auto mb-4 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <p class="text-gray-500 dark:text-gray-400 text-lg">不支持在线预览</p>
+                    <p class="text-gray-400 dark:text-gray-500 text-sm mt-1">{{ file.mime_type }}</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- 醒目下载按钮 -->
+        <div class="text-center">
+            <a href="?download=1"
+               class="inline-flex items-center px-8 py-3.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold text-lg shadow-lg shadow-primary-200 dark:shadow-primary-900/30 transition-all hover:scale-105">
+                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                下载文件 ({{ file.size|filesizeformat }})
+            </a>
+        </div>
+    </div>
+</body>
+</html>

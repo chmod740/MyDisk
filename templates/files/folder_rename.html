@@ -1,0 +1,16 @@
+<div class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50" @click.self="$el.remove()">
+    <div class="bg-white dark:bg-gray-800 dark:bg-gray-800 rounded-xl shadow-xl p-6 w-96">
+        <h3 class="text-lg font-semibold dark:text-white mb-4">重命名文件夹</h3>
+        <form method="post" action="{% url 'folder_rename' folder.id %}"
+              hx-post="{% url 'folder_rename' folder.id %}" hx-target="#modal-container" hx-swap="outerHTML">
+            {% csrf_token %}
+            <input type="text" name="name" value="{{ folder.name }}" required
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg mb-4 focus:ring-2 focus:ring-primary-500">
+            <div class="flex justify-end space-x-2">
+                <button type="button" @click="$el.closest('.fixed').remove()"
+                        class="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700">取消</button>
+                <button type="submit" class="px-4 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700">确认</button>
+            </div>
+        </form>
+    </div>
+</div>
