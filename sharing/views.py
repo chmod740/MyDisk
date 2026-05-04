@@ -139,8 +139,33 @@ def share_access(request, share_id):
         return resp
 
     if link.file:
-        return render(request, 'sharing/share_file.html', {'link': link, 'file': link.file})
+        ctx = {'link': link, 'file': link.file}
+        if link.file.is_text:
+            try:
+                with link.file.file.open('r') as fh:
+                    ctx['file_content'] = fh.read(50000)
+            except Exception:
+                ctx['file_content'] = '[无法读取文件内容]'
+        return render(request, 'sharing/share_file.html', ctx)
     elif link.folder:
+        # 预览文件夹中的单个文件
+        preview_id = request.GET.get('preview')
+        if preview_id:
+            try:
+                pf = File.objects.get(id=UUID(preview_id), folder=link.folder, is_deleted=False)
+                ctx = {'link': link, 'file': pf}
+                if pf.is_text:
+                    try:
+                        with pf.file.open('r') as fh:
+                            ctx['file_content'] = fh.read(50000)
+                    except Exception:
+                        ctx['file_content'] = '[无法读取文件内容]'
+                # HTMX 请求返回 partial，否则返回完整页面
+                tmpl = 'sharing/_share_preview_partial.html' if request.headers.get('HX-Request') else 'sharing/share_file.html'
+                return render(request, tmpl, ctx)
+            except (File.DoesNotExist, ValueError):
+                pass
+
         files = File.objects.filter(folder=link.folder, is_deleted=False)
         subfolders = Folder.objects.filter(parent=link.folder, is_deleted=False)
         return render(request, 'sharing/share_folder.html', {

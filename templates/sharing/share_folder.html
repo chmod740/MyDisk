@@ -5,9 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ folder.name }} - {{ site_name }} 分享</title>
-    <script src="https://cdn.tailwindcss.com"></script><script>tailwind.config={darkMode:"class",theme:{extend:{colors:{primary:{500:"#3b82f6",600:"#2563eb",700:"#1d4ed8"}}}}};if(localStorage.getItem("theme")==="dark")document.documentElement.classList.add("dark");</script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script>tailwind.config={darkMode:"class",theme:{extend:{colors:{primary:{500:"#3b82f6",600:"#2563eb",700:"#1d4ed8"}}}}};if(localStorage.getItem("theme")==="dark")document.documentElement.classList.add("dark");</script>
 </head>
-<body class="h-full bg-gray-50 dark:bg-gray-900">
+<body class="h-full bg-gray-50 dark:bg-gray-900" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     <div class="max-w-4xl mx-auto py-12 px-4">
         <div class="text-center mb-6">
             <div class="text-sm text-gray-400 dark:text-gray-500 mb-1">{{ link.owner.username }} 分享的文件夹</div>
@@ -46,11 +48,18 @@
                     {% endfor %}
                     {% for f in files %}
                     <tr>
-                        <td class="px-4 py-3 text-sm dark:text-gray-200">📄 {{ f.name }}</td>
+                        <td class="px-4 py-3 text-sm dark:text-gray-200">
+                            <a href="?preview={{ f.id }}"
+                               hx-get="?preview={{ f.id }}" hx-target="#preview-container" hx-swap="innerHTML"
+                               class="hover:text-primary-600 cursor-pointer">📄 {{ f.name }}</a>
+                        </td>
                         <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                             {% if f.size < 1024 %}{{ f.size }} B{% elif f.size < 1048576 %}{% widthratio f.size 1024 1 %} KB{% else %}{% widthratio f.size 1048576 1 %} MB{% endif %}
                         </td>
                         <td class="px-4 py-3 text-right">
+                            <a href="?preview={{ f.id }}"
+                               hx-get="?preview={{ f.id }}" hx-target="#preview-container" hx-swap="innerHTML"
+                               class="text-sm text-primary-600 hover:underline mr-2 cursor-pointer">预览</a>
                             <a href="?dl_file={{ f.id }}" class="text-sm text-primary-600 hover:underline">下载</a>
                         </td>
                     </tr>
@@ -59,6 +68,9 @@
             </table>
             {% endif %}
         </div>
+
+        <!-- 预览区域 -->
+        <div id="preview-container" class="mt-4"></div>
     </div>
 </body>
 </html>

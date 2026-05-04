@@ -27,7 +27,7 @@
             {% elif file.is_pdf %}
                 <iframe src="{{ file.file.url }}" class="w-full h-[55vh] rounded-lg border-0"></iframe>
             {% elif file.is_text %}
-                <pre class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-auto max-h-[55vh] text-sm"><code>文本文件 — 请下载后查看</code></pre>
+                <pre class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-auto max-h-[55vh] text-sm"><code>{{ file_content|default:"文本文件 — 请下载后查看" }}</code></pre>
             {% else %}
                 <div class="text-center py-16">
                     <svg class="w-20 h-20 mx-auto mb-4 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>

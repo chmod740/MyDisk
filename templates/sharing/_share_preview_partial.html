@@ -1,0 +1,25 @@
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+    <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-semibold dark:text-white truncate flex-1">{{ file.name }}</h3>
+        <a href="?dl_file={{ file.id }}" class="px-3 py-1.5 bg-primary-600 text-white text-xs rounded-lg hover:bg-primary-700 flex-shrink-0 ml-3">下载</a>
+    </div>
+
+    {% if file.is_image %}
+        <div class="flex justify-center">
+            <img src="{{ file.file.url }}" alt="{{ file.name }}" class="max-w-full max-h-[50vh] object-contain rounded-lg">
+        </div>
+    {% elif file.is_pdf %}
+        <iframe src="{{ file.file.url }}" class="w-full h-[50vh] rounded-lg border-0"></iframe>
+    {% elif file.is_text %}
+        <pre class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-auto max-h-[50vh] text-sm"><code>{{ file_content|default:"无法读取文件内容" }}</code></pre>
+    {% else %}
+        <div class="text-center py-8 text-gray-400 dark:text-gray-500">
+            <p>此文件类型不支持在线预览</p>
+            <p class="text-sm mt-1">{{ file.mime_type }}</p>
+        </div>
+    {% endif %}
+
+    <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+        {{ file.size|filesizeformat }} &middot; {{ file.mime_type }} &middot; {{ file.created_at|date:'Y-m-d H:i' }}
+    </div>
+</div>
