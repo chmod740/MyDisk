@@ -41,6 +41,18 @@
         </div>
     </form>
 
+    <!-- 修改密码 -->
+    <form method="post" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-4">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="change_password">
+        <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3">修改密码</h3>
+        <div class="flex items-center space-x-3">
+            <input type="password" name="new_password" placeholder="新密码（至少6位）" required minlength="6"
+                   class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 dark:text-gray-200">
+            <button type="submit" class="px-4 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700">修改</button>
+        </div>
+    </form>
+
     <!-- 管理员权限 -->
     <form method="post" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         {% csrf_token %}

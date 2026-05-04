@@ -78,6 +78,15 @@ def admin_user_update(request, pk):
                 user_obj.save(update_fields=['group'])
                 messages.success(request, f'已移除 {user_obj.username} 的用户组')
 
+        elif action == 'change_password':
+            new_pass = request.POST.get('new_password', '')
+            if len(new_pass) < 6:
+                messages.error(request, '密码长度至少6位')
+            else:
+                user_obj.set_password(new_pass)
+                user_obj.save()
+                messages.success(request, f'已修改 {user_obj.username} 的密码')
+
         elif action == 'toggle_admin':
             current_admin = user_obj.is_superuser
             if current_admin:
@@ -96,6 +105,37 @@ def admin_user_update(request, pk):
                 messages.success(request, f'已将 {user_obj.username} 设为管理员')
 
         return redirect('admin_user_list')
+
+
+@staff_member_required
+def admin_user_create(request):
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '')
+        is_admin = request.POST.get('is_admin') == 'on'
+
+        errors = []
+        if not username:
+            errors.append('用户名不能为空')
+        if len(password) < 6:
+            errors.append('密码长度至少6位')
+        if User.objects.filter(username=username).exists():
+            errors.append('用户名已存在')
+
+        if errors:
+            for e in errors:
+                messages.error(request, e)
+        else:
+            user = User.objects.create_user(username=username, email=email, password=password)
+            if is_admin:
+                user.is_staff = True
+                user.is_superuser = True
+                user.save()
+            messages.success(request, f'用户 "{username}" 创建成功')
+            return redirect('admin_user_list')
+
+    return render(request, 'accounts/user_create.html')
 
     return render(request, 'accounts/user_edit.html', {
         'user_obj': user_obj,

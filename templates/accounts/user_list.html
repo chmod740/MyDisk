@@ -3,7 +3,10 @@
 
 {% block content %}
 <div class="max-w-5xl mx-auto">
-    <h1 class="text-2xl font-bold dark:text-white mb-6">用户管理</h1>
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold dark:text-white">用户管理</h1>
+        <a href="{% url 'admin_user_create' %}" class="px-4 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700">新增用户</a>
+    </div>
 
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <table class="w-full">
