@@ -109,7 +109,24 @@
                     </td>
                     <td class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">-</td>
                     <td class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">-</td>
-                    <td class="px-4 py-2"></td>
+                    <td class="px-4 py-2 text-right">
+                        <div class="flex items-center justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <a href="{% url 'bucket_folder_download' bucket.id %}?path={{ current_path }}{{ sf }}/"
+                               class="p-1 text-gray-400 dark:text-gray-500 hover:text-primary-600 text-xs" title="下载">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            </a>
+                            {% if is_owner %}
+                            <button onclick="renameBucketFolder('{{ sf }}', '{{ current_path }}')"
+                                    class="p-1 text-gray-400 dark:text-gray-500 hover:text-primary-600 text-xs" title="重命名">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                            </button>
+                            <button onclick="deleteBucketFolder('{{ sf }}', '{{ current_path }}{{ sf }}/')"
+                                    class="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600 text-xs" title="删除">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </td>
                 </tr>
                 {% endfor %}
 
@@ -163,16 +180,41 @@
     <a href="#" data-action="preview" data-show="bucketfile" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">预览</a>
     <a href="#" data-action="download" data-show="bucketfile" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">下载</a>
     <a href="#" data-action="copy-link" data-show="bucketfile" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">复制下载链接</a>
-    <a href="#" data-action="rename-file" data-show="bucketfile" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">重命名</a>
+    <a href="#" data-action="rename-file" data-show="bucketfile" data-owner-only="true" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">重命名</a>
     <!-- 目录操作 -->
     <a href="#" data-action="download-folder" data-show="bucketfolder" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">下载</a>
-    <a href="#" data-action="rename-folder" data-show="bucketfolder" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">重命名</a>
+    <a href="#" data-action="rename-folder" data-show="bucketfolder" data-owner-only="true" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">重命名</a>
     <hr class="my-1">
-    <a href="#" data-action="delete-file" data-show="bucketfile" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center">删除</a>
-    <a href="#" data-action="delete-folder" data-show="bucketfolder" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center">删除目录</a>
+    <a href="#" data-action="delete-file" data-show="bucketfile" data-owner-only="true" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center">删除</a>
+    <a href="#" data-action="delete-folder" data-show="bucketfolder" data-owner-only="true" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center">删除目录</a>
 </div>
 
 <script>
+function renameBucketFolder(name, parentPath) {
+    const newName = prompt('重命名目录:', name);
+    if (newName && newName !== name) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/buckets/{{ bucket.id }}/folder/rename/';
+        form.innerHTML = '{% csrf_token %}<input type="hidden" name="old_path" value="' + parentPath + name + '/"><input type="hidden" name="new_name" value="' + newName + '"><input type="hidden" name="parent_path" value="{{ current_path }}">';
+        document.body.appendChild(form); form.submit();
+    }
+}
+async function deleteBucketFolder(name, path) {
+    if (!confirm('确定删除目录 "' + name + '" 及其所有文件？此操作不可恢复。')) return;
+    const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    const resp = await fetch(location.href, {headers:{'X-CSRFToken': csrf}});
+    const html = await resp.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const fileRows = doc.querySelectorAll('[data-item-type="bucketfile"]');
+    for (const r of fileRows) {
+        await fetch('/buckets/{{ bucket.id }}/files/' + r.dataset.itemId + '/delete/', {
+            method: 'POST', headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded'}, body: ''
+        });
+    }
+    location.reload();
+}
 // 桶上传处理 — 与我的文件 uploadHandler 一致
 function bucketUploadHandler() {
     return {
@@ -214,6 +256,10 @@ function bucketUploadHandler() {
 
         menu.querySelectorAll('[data-show]').forEach(el => {
             el.style.display = el.dataset.show === itemType ? '' : 'none';
+        });
+        const isOwner = {{ is_owner|yesno:'true,false' }};
+        menu.querySelectorAll('[data-owner-only]').forEach(el => {
+            if (!isOwner) el.style.display = 'none';
         });
 
         menu.style.display = 'block';
