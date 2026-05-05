@@ -24,6 +24,7 @@ urlpatterns = [
     path('folder/create/', views.folder_create, name='folder_create'),
     path('folder/<uuid:folder_id>/rename/', views.folder_rename, name='folder_rename'),
     path('folder/<uuid:folder_id>/delete/', views.folder_delete, name='folder_delete'),
+    path('folder/<uuid:folder_id>/download/', views.folder_download, name='folder_download'),
 
     path('trash/', views.trash_list, name='trash'),
     path('trash/folder/<uuid:folder_id>/', views.trash_folder_detail, name='trash_folder_detail'),

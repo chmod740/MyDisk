@@ -181,6 +181,10 @@
                     <td class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">{{ f.updated_at|date:'Y-m-d H:i' }}</td>
                     <td class="px-4 py-2 text-right">
                         <div class="flex items-center justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <a href="{% url 'folder_download' f.id %}"
+                               class="p-1 text-gray-400 dark:text-gray-500 hover:text-primary-600 text-xs" title="下载">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            </a>
                             <button hx-get="{% url 'folder_rename' f.id %}" hx-target="#modal-container" hx-swap="innerHTML"
                                     class="p-1 text-gray-400 dark:text-gray-500 hover:text-primary-600 text-xs" title="重命名">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -480,6 +484,7 @@ function uploadHandler() {
             htmx.ajax('GET', '/files/' + id + '/preview/', { target: '#modal-container', swap: 'innerHTML' });
         } else if (action === 'download') {
             if (t === 'file') window.location.href = '/files/' + id + '/download/';
+            else if (t === 'folder') window.location.href = '/files/folder/' + id + '/download/';
         } else if (action === 'rename') {
             const url = t === 'folder' ? '/files/folder/' + id + '/rename/' : '/files/' + id + '/rename/';
             htmx.ajax('GET', url, { target: '#modal-container', swap: 'innerHTML' });

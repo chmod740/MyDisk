@@ -457,6 +457,28 @@ def batch_download(request):
     return HttpResponse(status=405)
 
 
+@login_required
+def folder_download(request, folder_id):
+    """下载整个目录为 zip 包"""
+    folder = get_object_or_404(Folder, id=folder_id, owner=request.user, is_deleted=False)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        _add_folder_to_zip(zf, folder, '')
+
+    buf.seek(0)
+    response = HttpResponse(buf, content_type='application/zip')
+    response['Content-Disposition'] = f'attachment; filename="{folder.name}.zip"'
+    return response
+
+
+def _add_folder_to_zip(zf, folder, prefix):
+    """递归将文件夹内容加入 zip"""
+    for f in File.objects.filter(folder=folder, is_deleted=False):
+        zf.write(f.file.path, prefix + f.name)
+    for child in Folder.objects.filter(parent=folder, is_deleted=False):
+        _add_folder_to_zip(zf, child, prefix + child.name + '/')
+
+
 # ── 回收站 ──
 
 @login_required
