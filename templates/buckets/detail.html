@@ -35,7 +35,7 @@
     <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm">
         <span class="text-blue-700">公开链接：</span>
         <code class="text-blue-600">{{ request.scheme }}://{{ request.get_host }}{% url 'bucket_detail' bucket.id %}</code>
-        <button onclick="navigator.clipboard.writeText('{{ request.scheme }}://{{ request.get_host }}{% url 'bucket_detail' bucket.id %}')" class="ml-2 text-blue-500 hover:underline text-xs">复制</button>
+        <button onclick="navigator.clipboard.writeText('{{ request.scheme }}://{{ request.get_host }}{% url 'bucket_detail' bucket.id %}');showToast('公开链接已复制','success')" class="ml-2 text-blue-500 hover:underline text-xs">复制</button>
     </div>
     {% endif %}
 
