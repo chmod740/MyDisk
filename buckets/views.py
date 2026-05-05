@@ -471,6 +471,8 @@ def bucket_file_preview(request, pk, file_id):
     else:
         ctx['preview_type'] = 'unsupported'
 
+    if request.headers.get('HX-Request'):
+        return render(request, 'buckets/_preview_inline.html', ctx)
     return render(request, 'buckets/preview.html', ctx)
 
 

@@ -300,6 +300,8 @@ def file_preview(request, file_id):
     else:
         ctx['preview_type'] = 'unsupported'
 
+    if request.headers.get('HX-Request'):
+        return render(request, 'files/_preview_inline.html', ctx)
     return render(request, 'files/preview.html', ctx)
 
 

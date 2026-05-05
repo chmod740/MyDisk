@@ -1,0 +1,28 @@
+<div class="max-w-4xl mx-auto pt-4">
+    <div class="flex items-center justify-between mb-4">
+        <h1 class="text-xl font-bold dark:text-white truncate">{{ file.name }}</h1>
+        <div class="flex items-center space-x-2">
+            <a href="{% url 'bucket_file_download' bucket.id file.id %}" class="px-4 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700">下载</a>
+            <a href="{% url 'bucket_detail' bucket.id %}{% if file.folder_path %}?path={{ file.folder_path }}{% endif %}"
+               class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300">返回</a>
+        </div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        {% if preview_type == 'image' %}
+            <img src="{{ file.file.url }}" alt="{{ file.name }}" class="max-w-full max-h-[65vh] mx-auto object-contain rounded-lg">
+        {% elif preview_type == 'text' %}
+            <pre class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-auto max-h-[65vh] text-sm"><code>{{ content }}</code></pre>
+        {% elif preview_type == 'pdf' %}
+            <iframe src="{{ file.file.url }}" class="w-full h-[65vh] rounded-lg border-0"></iframe>
+        {% else %}
+            <div class="text-center py-12">
+                <p class="text-gray-500 dark:text-gray-400">此文件类型不支持在线预览</p>
+                <p class="text-gray-400 dark:text-gray-500 text-sm mt-1">{{ file.mime_type }}</p>
+            </div>
+        {% endif %}
+    </div>
+    <div class="mt-4 text-sm text-gray-500 dark:text-gray-400 space-y-1">
+        <p>大小: {{ file.size|filesizeformat }} &middot; {{ file.mime_type }}</p>
+        <p>上传时间: {{ file.created_at|date:'Y-m-d H:i' }}</p>
+    </div>
+</div>
