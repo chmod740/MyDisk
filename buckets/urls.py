@@ -14,6 +14,7 @@ urlpatterns = [
     path('<uuid:pk>/files/<uuid:file_id>/delete/', views.bucket_file_delete, name='bucket_file_delete'),
     path('<uuid:pk>/files/<uuid:file_id>/rename/', views.bucket_file_rename, name='bucket_file_rename'),
     path('<uuid:pk>/folder/rename/', views.bucket_folder_rename, name='bucket_folder_rename'),
+    path('<uuid:pk>/folder/download/', views.bucket_folder_download, name='bucket_folder_download'),
     # API Keys
     path('api-keys/', views.api_key_list, name='api_key_list'),
     path('api-keys/create/', views.api_key_create, name='api_key_create'),

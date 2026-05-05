@@ -348,6 +348,36 @@ def bucket_folder_rename(request, pk):
     return HttpResponse(status=405)
 
 
+def bucket_folder_download(request, pk):
+    """下载桶内目录为 zip 包（公开桶无需登录）"""
+    bucket = get_object_or_404(Bucket, pk=pk)
+    can_access, reason = _check_access(request, bucket)
+    if not can_access:
+        return HttpResponse('Forbidden', status=403)
+
+    path = request.GET.get('path', '').strip()
+    if path and not path.endswith('/'):
+        path += '/'
+
+    files = BucketFile.objects.filter(bucket=bucket, folder_path__startswith=path).exclude(name='.keep')
+    if not files:
+        return HttpResponse('No files', status=404)
+
+    import io as _io, zipfile as _zipfile
+    buf = _io.BytesIO()
+    with _zipfile.ZipFile(buf, 'w', _zipfile.ZIP_DEFLATED) as zf:
+        plen = len(path)
+        for f in files:
+            arcname = f.folder_path[plen:] + f.name if f.folder_path.startswith(path) else f.name
+            zf.write(f.file.path, arcname)
+
+    buf.seek(0)
+    folder_name = path.rstrip('/').split('/')[-1] if path.rstrip('/') else bucket.name
+    resp = HttpResponse(buf, content_type='application/zip')
+    resp['Content-Disposition'] = f'attachment; filename="{folder_name}.zip"'
+    return resp
+
+
 # ── API Key Management ──
 
 @login_required

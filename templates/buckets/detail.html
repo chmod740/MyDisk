@@ -165,6 +165,7 @@
     <a href="#" data-action="copy-link" data-show="bucketfile" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">复制下载链接</a>
     <a href="#" data-action="rename-file" data-show="bucketfile" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">重命名</a>
     <!-- 目录操作 -->
+    <a href="#" data-action="download-folder" data-show="bucketfolder" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">下载</a>
     <a href="#" data-action="rename-folder" data-show="bucketfolder" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">重命名</a>
     <hr class="my-1">
     <a href="#" data-action="delete-file" data-show="bucketfile" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center">删除</a>
@@ -262,6 +263,8 @@ function bucketUploadHandler() {
                     showToast(msg || '重命名失败', 'error');
                 }
             }
+        } else if (action === 'download-folder') {
+            window.location.href = '/buckets/{{ bucket.id }}/folder/download/?path=' + encodeURIComponent(cur.path);
         } else if (action === 'rename-folder') {
             const newName = prompt('重命名目录:', cur.name);
             if (newName && newName !== cur.name) {
