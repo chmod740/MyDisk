@@ -142,10 +142,10 @@ def share_access(request, share_id):
         ctx = {'link': link, 'file': link.file}
         if link.file.is_text:
             try:
-                with link.file.file.open('r') as fh:
+                with open(link.file.file.path, 'r', encoding='utf-8') as fh:
                     ctx['file_content'] = fh.read(50000)
-            except Exception:
-                ctx['file_content'] = '[无法读取文件内容]'
+            except Exception as e:
+                ctx['file_content'] = f'[读取错误: {type(e).__name__} — {e}]'
         return render(request, 'sharing/share_file.html', ctx)
     elif link.folder:
         # 预览文件夹中的单个文件
@@ -156,10 +156,10 @@ def share_access(request, share_id):
                 ctx = {'link': link, 'file': pf}
                 if pf.is_text:
                     try:
-                        with pf.file.open('r') as fh:
+                        with open(pf.file.path, 'r', encoding='utf-8') as fh:
                             ctx['file_content'] = fh.read(50000)
-                    except Exception:
-                        ctx['file_content'] = '[无法读取文件内容]'
+                    except Exception as e:
+                        ctx['file_content'] = f'[读取错误: {type(e).__name__} — {e}]'
                 # HTMX 请求返回 partial，否则返回完整页面
                 tmpl = 'sharing/_share_preview_partial.html' if request.headers.get('HX-Request') else 'sharing/share_file.html'
                 return render(request, tmpl, ctx)

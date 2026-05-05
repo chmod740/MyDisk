@@ -14,6 +14,7 @@ urlpatterns = [
     path('upload/', views.file_upload, name='file_upload'),
     path('<uuid:file_id>/download/', views.file_download, name='file_download'),
     path('<uuid:file_id>/preview/', views.file_preview, name='file_preview'),
+    path('<uuid:file_id>/edit/', views.file_edit, name='file_edit'),
     path('<uuid:file_id>/rename/', views.file_rename, name='file_rename'),
     path('<uuid:file_id>/delete/', views.file_delete, name='file_delete'),
     path('<uuid:file_id>/move/', views.file_move, name='file_move'),

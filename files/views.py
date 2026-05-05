@@ -291,10 +291,10 @@ def file_preview(request, file_id):
     elif file_obj.is_text:
         ctx['preview_type'] = 'text'
         try:
-            with file_obj.file.open('r') as f:
+            with open(file_obj.file.path, 'r', encoding='utf-8') as f:
                 ctx['content'] = f.read(50000)
-        except Exception:
-            ctx['content'] = '[无法读取文件内容]'
+        except Exception as e:
+            ctx['content'] = f'[读取错误: {type(e).__name__} — {e}]'
     elif file_obj.is_pdf:
         ctx['preview_type'] = 'pdf'
     else:
@@ -303,6 +303,35 @@ def file_preview(request, file_id):
     if request.headers.get('HX-Request'):
         return render(request, 'files/_preview_inline.html', ctx)
     return render(request, 'files/preview.html', ctx)
+
+
+@login_required
+def file_edit(request, file_id):
+    """Markdown 编辑器 — GET 加载内容，POST 保存"""
+    file_obj = get_object_or_404(File, id=file_id, owner=request.user, is_deleted=False)
+
+    if request.method == 'POST':
+        new_content = request.POST.get('content', '')
+        # 写入文件
+        with open(file_obj.file.path, 'w', encoding='utf-8') as f:
+            f.write(new_content)
+        # 更新文件大小
+        file_obj.size = len(new_content.encode('utf-8'))
+        file_obj.save(update_fields=['size', 'updated_at'])
+        _recalc_storage(request.user)
+        messages.success(request, f'"{file_obj.name}" 已保存')
+        return redirect('file_list')
+
+    try:
+        with open(file_obj.file.path, 'r', encoding='utf-8') as f:
+            content = f.read()
+    except Exception:
+        content = ''
+
+    return render(request, 'files/markdown_edit.html', {
+        'file': file_obj,
+        'content': content,
+    })
 
 
 @login_required

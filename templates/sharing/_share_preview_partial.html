@@ -1,17 +1,116 @@
-<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-    <div class="flex items-center justify-between mb-3">
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="flex items-center justify-between p-4 pb-2">
         <h3 class="text-lg font-semibold dark:text-white truncate flex-1">{{ file.name }}</h3>
         <a href="?dl_file={{ file.id }}" class="px-3 py-1.5 bg-primary-600 text-white text-xs rounded-lg hover:bg-primary-700 flex-shrink-0 ml-3">下载</a>
     </div>
 
     {% if file.is_image %}
-        <div class="flex justify-center">
+        <div class="flex justify-center p-4 pt-0">
             <img src="{{ file.file.url }}" alt="{{ file.name }}" class="max-w-full max-h-[50vh] object-contain rounded-lg">
         </div>
     {% elif file.is_pdf %}
-        <iframe src="{{ file.file.url }}" class="w-full h-[50vh] rounded-lg border-0"></iframe>
+        <iframe src="{{ file.file.url }}" class="w-full h-[50vh] border-0"></iframe>
+    {% elif file.extension == '.md' %}
+        <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.9.0/styles/github.min.css">
+        <link rel="stylesheet" href="https://unpkg.com/github-markdown-css@5.8.1/github-markdown.css">
+        <link rel="stylesheet" href="https://unpkg.com/katex@0.16.21/dist/katex.min.css">
+        <style>
+        .markdown-body { box-sizing:border-box; min-width:200px; max-width:none; padding:0 32px 32px; }
+        .dark .markdown-body { color-scheme:dark; --color-canvas-default:#0d1117; --color-canvas-subtle:#161b22; --color-canvas-inset-shadow:none; --color-fg-default:#e6edf3; --color-fg-muted:#8b949e; --color-fg-subtle:#6e7681; --color-border-default:#30363d; --color-border-muted:#21262d; --color-neutral-muted:rgba(110,118,129,0.4); --color-accent-fg:#58a6ff; --color-accent-emphasis:#1f6feb; --color-danger-fg:#f85149; --color-prettylights-syntax-comment:#8b949e; --color-prettylights-syntax-constant:#79c0ff; --color-prettylights-syntax-entity:#d2a8ff; --color-prettylights-syntax-storage-modifier-import:#c9d1d9; --color-prettylights-syntax-entity-tag:#7ee787; --color-prettylights-syntax-keyword:#ff7b72; --color-prettylights-syntax-string:#a5d6ff; --color-prettylights-syntax-variable:#ffa657; --color-prettylights-syntax-brackethighlighter-unmatched:#f85149; --color-prettylights-syntax-invalid-illegal-text:#f0f6fc; --color-prettylights-syntax-invalid-illegal-bg:#8e1519; --color-prettylights-syntax-carriage-return-text:#f0f6fc; --color-prettylights-syntax-carriage-return-bg:#b62324; --color-prettylights-syntax-string-regexp:#7ee787; --color-prettylights-syntax-markup-list:#f2cc60; --color-prettylights-syntax-markup-heading:#1f6feb; --color-prettylights-syntax-markup-italic:#c9d1d9; --color-prettylights-syntax-markup-bold:#c9d1d9; --color-prettylights-syntax-markup-deleted-text:#ffdcd7; --color-prettylights-syntax-markup-deleted-bg:#67060c; --color-prettylights-syntax-markup-inserted-text:#aff5b4; --color-prettylights-syntax-markup-inserted-bg:#033a16; --color-prettylights-syntax-markup-changed-text:#ffdfb6; --color-prettylights-syntax-markup-changed-bg:#5a1e02; --color-prettylights-syntax-markup-ignored-text:#c9d1d9; --color-prettylights-syntax-markup-ignored-bg:#1158c7; --color-prettylights-syntax-meta-diff-range:#d2a8ff; --color-prettylights-syntax-brackethighlighter-angle:#8b949e; --color-prettylights-syntax-sublimelinter-gutter-mark:#484f58; --color-prettylights-syntax-constant-other-reference-link:#a5d6ff; }
+        .dark .markdown-body img { background-color:transparent; }
+        </style>
+        <div class="markdown-body" id="md-preview">{{ file_content|default:"无法读取文件内容" }}</div>
+        <script>
+        (function boot() {
+            var el = document.getElementById('md-preview');
+            if (!el) return;
+
+            var deps = [
+                { name: 'hljs', src: 'https://unpkg.com/@highlightjs/cdn-assets@11.9.0/highlight.min.js' },
+                { name: 'marked', src: 'https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js' },
+                { name: 'katex', src: 'https://unpkg.com/katex@0.16.21/dist/katex.min.js' },
+                { name: 'mermaid', src: 'https://unpkg.com/mermaid@11.6.0/dist/mermaid.min.js' },
+            ];
+
+            function loadScript(dep, cb) {
+                if (window[dep.name]) return cb();
+                var s = document.createElement('script');
+                s.src = dep.src;
+                s.onload = cb;
+                document.head.appendChild(s);
+            }
+
+            function loadAll(i, done) {
+                if (i >= deps.length) return done();
+                loadScript(deps[i], function () { loadAll(i + 1, done); });
+            }
+
+            function render() {
+                var text = el.textContent;
+
+                var codeBlocks = [];
+                text = text.replace(/(```[\s\S]*?```)/g, function (m) {
+                    codeBlocks.push(m);
+                    return '\x00C' + (codeBlocks.length - 1) + '\x00';
+                });
+
+                var mathBlocks = [];
+                text = text.replace(/\$\$([\s\S]*?)\$\$/g, function (_, f) {
+                    mathBlocks.push({ formula: f.trim(), display: true });
+                    return '\x00M' + (mathBlocks.length - 1) + '\x00';
+                });
+
+                var mathInlines = [];
+                text = text.replace(/\$(.+?)\$/g, function (_, f) {
+                    mathInlines.push({ formula: f.trim(), display: false });
+                    return '\x00I' + (mathInlines.length - 1) + '\x00';
+                });
+
+                text = text.replace(/\x00C(\d+)\x00/g, function (_, i) { return codeBlocks[parseInt(i)]; });
+
+                marked.setOptions({
+                    gfm: true,
+                    breaks: true,
+                    highlight: function (code, lang) {
+                        if (lang && hljs.getLanguage(lang)) {
+                            return hljs.highlight(code, { language: lang }).value;
+                        }
+                        return code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    }
+                });
+
+                var html = marked.parse(text);
+
+                html = html.replace(/\x00M(\d+)\x00/g, function (_, i) {
+                    var m = mathBlocks[parseInt(i)];
+                    try {
+                        return katex.renderToString(m.formula, { displayMode: true, throwOnError: false });
+                    } catch (e) { return '<pre><code>' + m.formula + '</code></pre>'; }
+                });
+
+                html = html.replace(/\x00I(\d+)\x00/g, function (_, i) {
+                    var m = mathInlines[parseInt(i)];
+                    try {
+                        return katex.renderToString(m.formula, { displayMode: false, throwOnError: false });
+                    } catch (e) { return '<code>' + m.formula + '</code>'; }
+                });
+
+                html = html.replace(/<pre><code class="language-mermaid">([\s\S]*?)<\/code><\/pre>/g,
+                    '<pre class="mermaid">$1</pre>');
+
+                el.innerHTML = html;
+
+                if (el.querySelector('.mermaid')) {
+                    mermaid.initialize({ startOnLoad: false, theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default' });
+                    mermaid.run({ querySelector: '.mermaid' });
+                }
+            }
+
+            loadAll(0, render);
+        })();
+        </script>
     {% elif file.is_text %}
-        <pre class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-auto max-h-[50vh] text-sm"><code>{{ file_content|default:"无法读取文件内容" }}</code></pre>
+        <pre class="mx-4 mb-4 bg-gray-900 text-green-400 p-4 rounded-lg overflow-auto max-h-[50vh] text-sm"><code>{{ file_content|default:"无法读取文件内容" }}</code></pre>
     {% else %}
         <div class="text-center py-8 text-gray-400 dark:text-gray-500">
             <p>此文件类型不支持在线预览</p>
@@ -19,7 +118,7 @@
         </div>
     {% endif %}
 
-    <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+    <div class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700">
         {{ file.size|filesizeformat }} &middot; {{ file.mime_type }} &middot; {{ file.created_at|date:'Y-m-d H:i' }}
     </div>
 </div>
