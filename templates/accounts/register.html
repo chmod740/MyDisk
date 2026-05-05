@@ -4,7 +4,7 @@
 {% block content %}
 <div class="max-w-md mx-auto mt-20">
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
-        <h1 class="text-2xl font-bold dark:text-white text-center mb-6">注册 DjangoDisk</h1>
+        <h1 class="text-2xl font-bold dark:text-white text-center mb-6">注册 {{ site_name }}</h1>
         <form method="post" class="space-y-4">
             {% csrf_token %}
             <div>

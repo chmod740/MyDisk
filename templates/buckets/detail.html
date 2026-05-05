@@ -224,7 +224,8 @@ function bucketUploadHandler() {
         e.preventDefault();
         const action = e.target.closest('[data-action]')?.dataset?.action;
         if (!action || !cur) return; menu.style.display = 'none';
-        const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const csrfEl = document.querySelector('[name=csrfmiddlewaretoken]');
+        const csrf = csrfEl ? csrfEl.value : '';
 
         if (action === 'preview') {
             htmx.ajax('GET', '/buckets/{{ bucket.id }}/files/' + cur.id + '/preview/', {target:'#modal-container', swap:'innerHTML'});

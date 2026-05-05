@@ -428,10 +428,13 @@ def api_bucket_file_download(request, pk, file_id):
     return FileResponse(file_obj.file, as_attachment=True, filename=file_obj.name)
 
 
-@login_required
 def bucket_file_download_url(request, pk, file_id):
     """返回带token的下载URL（私有桶需要）"""
-    bucket = get_object_or_404(Bucket, pk=pk, owner=request.user)
+    bucket = get_object_or_404(Bucket, pk=pk)
+    can_access, reason = _check_access(request, bucket)
+    if not can_access:
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+
     file_obj = get_object_or_404(BucketFile, pk=file_id, bucket=bucket)
 
     file_path = (file_obj.folder_path + file_obj.name).strip('/')
