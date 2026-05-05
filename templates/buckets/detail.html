@@ -15,7 +15,7 @@
     <!-- 头部 -->
     <div class="flex items-center justify-between mb-4">
         <div class="flex items-center space-x-3">
-            <a href="{% url 'bucket_list' %}" class="text-gray-400 hover:text-gray-600">&larr;</a>
+            {% if user.is_authenticated %}<a href="{% url 'bucket_list' %}" class="text-gray-400 hover:text-gray-600">&larr;</a>{% endif %}
             <h1 class="text-xl font-bold dark:text-white">{{ bucket.name }}</h1>
             <span class="text-xs px-2 py-0.5 rounded-full {% if bucket.is_public %}bg-green-100 text-green-700{% else %}bg-gray-100 text-gray-600{% endif %}">
                 {% if bucket.is_public %}🌐 公开{% else %}🔒 私有{% endif %}
