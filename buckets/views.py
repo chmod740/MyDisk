@@ -495,10 +495,10 @@ def bucket_file_preview(request, pk, file_id):
     elif file_obj.is_text:
         ctx['preview_type'] = 'text'
         try:
-            with file_obj.file.open('r') as f:
+            with open(file_obj.file.path, 'r', encoding='utf-8') as f:
                 ctx['content'] = f.read(50000)
-        except Exception:
-            ctx['content'] = '[无法读取文件内容]'
+        except Exception as e:
+            ctx['content'] = f'[读取错误: {type(e).__name__} — {e}]'
     elif file_obj.mime_type == 'application/pdf':
         ctx['preview_type'] = 'pdf'
     else:
@@ -507,6 +507,38 @@ def bucket_file_preview(request, pk, file_id):
     if request.headers.get('HX-Request'):
         return render(request, 'buckets/_preview_inline.html', ctx)
     return render(request, 'buckets/preview.html', ctx)
+
+
+def bucket_file_edit(request, pk, file_id):
+    """桶文件 Markdown 编辑器 — GET 加载内容，POST 保存（仅桶拥有者可编辑）"""
+    bucket = get_object_or_404(Bucket, pk=pk)
+    if not request.user.is_authenticated:
+        return redirect(f'/accounts/login/?next=/buckets/{pk}/files/{file_id}/edit/')
+    if request.user != bucket.owner:
+        return HttpResponse('Forbidden', status=403)
+
+    file_obj = get_object_or_404(BucketFile, pk=file_id, bucket=bucket)
+
+    if request.method == 'POST':
+        new_content = request.POST.get('content', '')
+        with open(file_obj.file.path, 'w', encoding='utf-8') as f:
+            f.write(new_content)
+        file_obj.size = len(new_content.encode('utf-8'))
+        file_obj.save(update_fields=['size'])
+        messages.success(request, f'"{file_obj.name}" 已保存')
+        return redirect('bucket_detail', pk=bucket.id)
+
+    try:
+        with open(file_obj.file.path, 'r', encoding='utf-8') as f:
+            content = f.read()
+    except Exception:
+        content = ''
+
+    return render(request, 'buckets/markdown_edit.html', {
+        'bucket': bucket,
+        'file': file_obj,
+        'content': content,
+    })
 
 
 # ── 路径风格下载 ──

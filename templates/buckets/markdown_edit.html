@@ -1,0 +1,376 @@
+{% extends 'base.html' %}
+{% block title %}编辑 - {{ file.name }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.9.0/styles/github.min.css">
+<link rel="stylesheet" href="https://unpkg.com/github-markdown-css@5.8.1/github-markdown.css">
+<link rel="stylesheet" href="https://unpkg.com/katex@0.16.21/dist/katex.min.css">
+<script src="https://unpkg.com/@highlightjs/cdn-assets@11.9.0/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
+<script src="https://unpkg.com/katex@0.16.21/dist/katex.min.js"></script>
+<script src="https://unpkg.com/mermaid@11.6.0/dist/mermaid.min.js"></script>
+<style>
+.editor-layout {
+    display: flex;
+    height: calc(100vh - 10rem);
+    min-height: 500px;
+}
+.editor-pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #e5e7eb;
+}
+.dark .editor-pane { border-right-color: #374151; }
+.preview-pane {
+    flex: 1;
+    overflow-y: auto;
+    background: #fff;
+}
+.dark .preview-pane { background: #0d1117; }
+
+#editor {
+    flex: 1;
+    width: 100%;
+    padding: 16px;
+    border: none;
+    resize: none;
+    font-family: 'SF Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    background: #fafbfc;
+    color: #24292e;
+    outline: none;
+    tab-size: 4;
+}
+.dark #editor { background: #0d1117; color: #c9d1d9; }
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 8px;
+    background: #f6f8fa;
+    border-bottom: 1px solid #e5e7eb;
+    flex-wrap: wrap;
+}
+.dark .toolbar { background: #161b22; border-bottom-color: #30363d; }
+.toolbar button {
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    border: none; background: transparent;
+    border-radius: 6px;
+    color: #57606a; font-size: 16px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.dark .toolbar button { color: #8b949e; }
+.toolbar button:hover { background: #e5e7eb; }
+.dark .toolbar button:hover { background: #30363d; }
+.toolbar .sep {
+    width: 1px; height: 20px;
+    background: #d0d7de;
+    margin: 0 4px;
+}
+.dark .toolbar .sep { background: #30363d; }
+
+.markdown-body {
+    box-sizing: border-box;
+    min-width: 200px;
+    max-width: none;
+    padding: 32px;
+}
+.dark .markdown-body {
+    color-scheme: dark;
+    --color-canvas-default: #0d1117; --color-canvas-subtle: #161b22; --color-canvas-inset-shadow: none;
+    --color-fg-default: #e6edf3; --color-fg-muted: #8b949e; --color-fg-subtle: #6e7681;
+    --color-border-default: #30363d; --color-border-muted: #21262d;
+    --color-neutral-muted: rgba(110,118,129,0.4); --color-accent-fg: #58a6ff; --color-accent-emphasis: #1f6feb;
+    --color-danger-fg: #f85149;
+    --color-prettylights-syntax-comment: #8b949e; --color-prettylights-syntax-constant: #79c0ff;
+    --color-prettylights-syntax-entity: #d2a8ff; --color-prettylights-syntax-storage-modifier-import: #c9d1d9;
+    --color-prettylights-syntax-entity-tag: #7ee787; --color-prettylights-syntax-keyword: #ff7b72;
+    --color-prettylights-syntax-string: #a5d6ff; --color-prettylights-syntax-variable: #ffa657;
+    --color-prettylights-syntax-brackethighlighter-unmatched: #f85149;
+    --color-prettylights-syntax-invalid-illegal-text: #f0f6fc; --color-prettylights-syntax-invalid-illegal-bg: #8e1519;
+    --color-prettylights-syntax-carriage-return-text: #f0f6fc; --color-prettylights-syntax-carriage-return-bg: #b62324;
+    --color-prettylights-syntax-string-regexp: #7ee787; --color-prettylights-syntax-markup-list: #f2cc60;
+    --color-prettylights-syntax-markup-heading: #1f6feb; --color-prettylights-syntax-markup-italic: #c9d1d9;
+    --color-prettylights-syntax-markup-bold: #c9d1d9; --color-prettylights-syntax-markup-deleted-text: #ffdcd7;
+    --color-prettylights-syntax-markup-deleted-bg: #67060c; --color-prettylights-syntax-markup-inserted-text: #aff5b4;
+    --color-prettylights-syntax-markup-inserted-bg: #033a16; --color-prettylights-syntax-markup-changed-text: #ffdfb6;
+    --color-prettylights-syntax-markup-changed-bg: #5a1e02; --color-prettylights-syntax-markup-ignored-text: #c9d1d9;
+    --color-prettylights-syntax-markup-ignored-bg: #1158c7; --color-prettylights-syntax-meta-diff-range: #d2a8ff;
+    --color-prettylights-syntax-brackethighlighter-angle: #8b949e; --color-prettylights-syntax-sublimelinter-gutter-mark: #484f58;
+    --color-prettylights-syntax-constant-other-reference-link: #a5d6ff;
+}
+.dark .markdown-body img { background-color: transparent; }
+
+@media (max-width: 768px) {
+    .editor-layout { flex-direction: column; height: auto; }
+    .editor-pane { border-right: none; border-bottom: 2px solid #e5e7eb; height: 50vh; }
+    .dark .editor-pane { border-bottom-color: #30363d; }
+    .preview-pane { height: 50vh; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-full mx-auto">
+    <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center space-x-3">
+            <a href="{% url 'bucket_detail' bucket.id %}{% if file.folder_path %}?path={{ file.folder_path }}{% endif %}"
+               class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">&larr; 返回</a>
+            <h1 class="text-lg font-bold dark:text-white truncate max-w-md">{{ file.name }}</h1>
+            <span class="text-xs text-gray-400 dark:text-gray-500 hidden sm:inline" id="status-bar">就绪</span>
+        </div>
+        <div class="flex items-center space-x-2">
+            <span class="text-xs text-gray-400 dark:text-gray-500 hidden sm:inline" id="word-count"></span>
+            <form method="post" id="edit-form">
+                {% csrf_token %}
+                <input type="hidden" name="content" id="content-input">
+                <button type="submit" onclick="document.getElementById('content-input').value=editor.value"
+                        class="px-5 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700 font-medium">保存</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 工具栏 -->
+    <div class="toolbar rounded-t-lg" id="toolbar">
+        <button title="粗体 (Ctrl+B)" data-action="bold"><b>B</b></button>
+        <button title="斜体 (Ctrl+I)" data-action="italic"><i>I</i></button>
+        <button title="删除线" data-action="strikethrough"><s>S</s></button>
+        <span class="sep"></span>
+        <button title="标题" data-action="heading">H</button>
+        <button title="引用" data-action="quote">&ldquo;</button>
+        <button title="无序列表" data-action="ul">&bull;</button>
+        <button title="有序列表" data-action="ol">1.</button>
+        <button title="任务列表" data-action="task">&#9744;</button>
+        <span class="sep"></span>
+        <button title="链接" data-action="link">&#128279;</button>
+        <button title="图片" data-action="image">&#128247;</button>
+        <button title="代码" data-action="code">&lt;/&gt;</button>
+        <button title="代码块" data-action="codeblock">```</button>
+        <button title="表格" data-action="table">&#9776;</button>
+        <button title="分割线" data-action="hr">&mdash;</button>
+    </div>
+
+    <!-- 编辑/预览区 -->
+    <div class="editor-layout rounded-b-lg overflow-hidden border border-t-0 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+        <div class="editor-pane">
+            <textarea id="editor" placeholder="开始编写 Markdown...">{{ content }}</textarea>
+        </div>
+        <div class="preview-pane">
+            <div class="markdown-body" id="preview"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    var editor = document.getElementById('editor');
+    var preview = document.getElementById('preview');
+    var statusBar = document.getElementById('status-bar');
+    var wordCount = document.getElementById('word-count');
+
+    // ── Live preview with debounce ──
+    var timer = null;
+    var mermaidQueue = null;
+
+    function render() {
+        statusBar.textContent = '渲染中...';
+        var text = editor.value;
+
+        var codeBlocks = [];
+        text = text.replace(/(```[\s\S]*?```)/g, function (m) {
+            codeBlocks.push(m);
+            return '\x00C' + (codeBlocks.length - 1) + '\x00';
+        });
+
+        var mathBlocks = [];
+        text = text.replace(/\$\$([\s\S]*?)\$\$/g, function (_, f) {
+            mathBlocks.push({ formula: f.trim(), display: true });
+            return '\x00M' + (mathBlocks.length - 1) + '\x00';
+        });
+
+        var mathInlines = [];
+        text = text.replace(/\$(.+?)\$/g, function (_, f) {
+            mathInlines.push({ formula: f.trim(), display: false });
+            return '\x00I' + (mathInlines.length - 1) + '\x00';
+        });
+
+        text = text.replace(/\x00C(\d+)\x00/g, function (_, i) { return codeBlocks[parseInt(i)]; });
+
+        marked.setOptions({
+            gfm: true,
+            breaks: true,
+            highlight: function (code, lang) {
+                if (lang && hljs.getLanguage(lang)) {
+                    return hljs.highlight(code, { language: lang }).value;
+                }
+                return code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            }
+        });
+
+        var html = marked.parse(text);
+
+        html = html.replace(/\x00M(\d+)\x00/g, function (_, i) {
+            var m = mathBlocks[parseInt(i)];
+            try {
+                return katex.renderToString(m.formula, { displayMode: true, throwOnError: false });
+            } catch (e) { return '<pre><code>' + m.formula + '</code></pre>'; }
+        });
+        html = html.replace(/\x00I(\d+)\x00/g, function (_, i) {
+            var m = mathInlines[parseInt(i)];
+            try {
+                return katex.renderToString(m.formula, { displayMode: false, throwOnError: false });
+            } catch (e) { return '<code>' + m.formula + '</code>'; }
+        });
+
+        html = html.replace(/<pre><code class="language-mermaid">([\s\S]*?)<\/code><\/pre>/g,
+            '<pre class="mermaid">$1</pre>');
+
+        preview.innerHTML = html;
+
+        if (preview.querySelector('.mermaid')) {
+            clearTimeout(mermaidQueue);
+            mermaidQueue = setTimeout(function () {
+                mermaid.initialize({ startOnLoad: false, theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default' });
+                mermaid.run({ querySelector: '.mermaid' });
+            }, 300);
+        }
+
+        statusBar.textContent = '就绪';
+    }
+
+    function debounceRender() {
+        clearTimeout(timer);
+        statusBar.textContent = '等待输入...';
+        timer = setTimeout(render, 200);
+    }
+
+    editor.addEventListener('input', debounceRender);
+
+    editor.addEventListener('input', function () {
+        var chars = editor.value.length;
+        var lines = editor.value.split(/\n/).length;
+        wordCount.textContent = chars + ' 字 / ' + lines + ' 行';
+    });
+
+    // ── Toolbar ──
+    function wrapSelection(before, after, placeholder) {
+        var start = editor.selectionStart;
+        var end = editor.selectionEnd;
+        var text = editor.value;
+        var sel = text.substring(start, end) || placeholder || '';
+
+        var newText = text.substring(0, start) + before + sel + after + text.substring(end);
+        editor.value = newText;
+
+        var newCursor = start + before.length + sel.length + after.length;
+        if (!placeholder && end === start) {
+            newCursor = start + before.length;
+        }
+        editor.setSelectionRange(newCursor, newCursor);
+        editor.focus();
+        render();
+    }
+
+    function insertLinePrefix(prefix) {
+        var start = editor.selectionStart;
+        var text = editor.value;
+        var lineStart = text.lastIndexOf('\n', start - 1) + 1;
+        var before = text.substring(0, lineStart);
+        var after = text.substring(lineStart);
+        editor.value = before + prefix + after;
+        editor.setSelectionRange(lineStart + prefix.length, lineStart + prefix.length);
+        editor.focus();
+        render();
+    }
+
+    document.getElementById('toolbar').addEventListener('click', function (e) {
+        var btn = e.target.closest('button');
+        if (!btn) return;
+        var action = btn.dataset.action;
+
+        switch (action) {
+            case 'bold': wrapSelection('**', '**', '粗体'); break;
+            case 'italic': wrapSelection('_', '_', '斜体'); break;
+            case 'strikethrough': wrapSelection('~~', '~~', '删除线'); break;
+            case 'heading': insertLinePrefix('## '); break;
+            case 'quote': insertLinePrefix('> '); break;
+            case 'ul': insertLinePrefix('- '); break;
+            case 'ol': insertLinePrefix('1. '); break;
+            case 'task': insertLinePrefix('- [ ] '); break;
+            case 'link': wrapSelection('[', '](url)', '链接文本'); break;
+            case 'image': wrapSelection('![', '](url)', '图片描述'); break;
+            case 'code': wrapSelection('`', '`', 'code'); break;
+            case 'codeblock': wrapSelection('\n```\n', '\n```\n', '语言'); break;
+            case 'table':
+                var tableTpl = '\n| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n| 内容 | 内容 | 内容 |\n';
+                var s = editor.selectionStart;
+                editor.value = editor.value.substring(0, s) + tableTpl + editor.value.substring(s);
+                editor.setSelectionRange(s + tableTpl.length, s + tableTpl.length);
+                editor.focus();
+                render();
+                break;
+            case 'hr': insertLinePrefix('---\n'); break;
+        }
+    });
+
+    // ── Keyboard shortcuts ──
+    editor.addEventListener('keydown', function (e) {
+        if (e.ctrlKey || e.metaKey) {
+            switch (e.key) {
+                case 'b': e.preventDefault(); wrapSelection('**', '**', '粗体'); break;
+                case 'i': e.preventDefault(); wrapSelection('_', '_', '斜体'); break;
+                case 'k': e.preventDefault(); wrapSelection('[', '](url)', '链接文本'); break;
+                case 's': e.preventDefault();
+                    document.getElementById('content-input').value = editor.value;
+                    document.getElementById('edit-form').submit();
+                    break;
+            }
+        }
+        if (e.key === 'Tab' && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            var start = editor.selectionStart;
+            var end = editor.selectionEnd;
+            var text = editor.value;
+
+            if (start !== end) {
+                var lineStart = text.lastIndexOf('\n', start - 1) + 1;
+                var lineEnd = text.indexOf('\n', end - 1);
+                if (lineEnd === -1) lineEnd = text.length + 1;
+
+                var block = text.substring(lineStart, lineEnd);
+                var lines = block.split('\n');
+                var indented = lines.map(function (l) { return '    ' + l; }).join('\n');
+                editor.value = text.substring(0, lineStart) + indented + text.substring(lineEnd);
+                editor.setSelectionRange(lineStart, lineStart + indented.length);
+            } else {
+                editor.value = text.substring(0, start) + '    ' + text.substring(end);
+                editor.setSelectionRange(start + 4, start + 4);
+            }
+            editor.focus();
+        }
+    });
+
+    // ── Scroll sync ──
+    var syncing = false;
+    editor.addEventListener('scroll', function () {
+        if (syncing) return;
+        syncing = true;
+        var pct = editor.scrollTop / (editor.scrollHeight - editor.clientHeight);
+        var target = pct * (preview.parentElement.scrollHeight - preview.parentElement.clientHeight);
+        if (isFinite(target)) preview.parentElement.scrollTop = target;
+        syncing = false;
+    });
+
+    // ── Initial render ──
+    render();
+    var chars = editor.value.length;
+    var lines = editor.value.split(/\n/).length;
+    wordCount.textContent = chars + ' 字 / ' + lines + ' 行';
+})();
+</script>
+{% endblock %}
