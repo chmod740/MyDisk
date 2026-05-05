@@ -100,7 +100,7 @@
             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                 <!-- 目录行 — 与我的文件文件夹行一致 -->
                 {% for sf in subfolders %}
-                <tr class="hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 group" data-item-type="bucketfolder" data-item-path="{{ current_path }}{{ sf }}/">
+                <tr class="hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 group" data-item-type="bucketfolder" data-item-name="{{ sf }}" data-item-path="{{ current_path }}{{ sf }}/">
                     <td class="px-4 py-2">
                         <a href="{% url 'bucket_detail' bucket.id %}?path={{ current_path }}{{ sf }}/" class="flex items-center text-sm hover:text-primary-600 dark:text-gray-200">
                             <svg class="w-5 h-5 mr-2 text-yellow-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
@@ -156,6 +156,10 @@
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                             </a>
                             {% if is_owner %}
+                            <button onclick="renameBucketFile('{{ f.name }}', '{{ f.id }}')"
+                                    class="p-1 text-gray-400 dark:text-gray-500 hover:text-primary-600 text-xs" title="重命名">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                            </button>
                             <form method="post" action="{% url 'bucket_file_delete' bucket.id f.id %}" class="inline" onsubmit="return confirm('确定删除此文件？')">
                                 {% csrf_token %}
                                 <button class="p-1 text-gray-400 hover:text-red-600 text-xs" title="删除">
@@ -189,31 +193,91 @@
     <a href="#" data-action="delete-folder" data-show="bucketfolder" data-owner-only="true" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center">删除目录</a>
 </div>
 
+
+<!-- 重命名目录模态框 -->
+<div id="rename-folder-modal" style="display:none" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-96">
+<h3 class="text-lg font-semibold dark:text-white mb-4">重命名目录</h3>
+<input type="text" id="rename-folder-input" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm mb-4 bg-white dark:bg-gray-700 dark:text-gray-200">
+<div class="flex justify-end space-x-2">
+<button onclick="document.getElementById('rename-folder-modal').style.display='none'" class="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300">取消</button>
+<button onclick="submitRenameFolder()" class="px-4 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700">确认</button>
+</div></div></div>
+
+<!-- 删除目录确认模态框 -->
+<div id="delete-folder-modal" style="display:none" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-96">
+<h3 class="text-lg font-semibold dark:text-white mb-2">删除目录</h3>
+<p id="delete-folder-msg" class="text-sm text-gray-500 dark:text-gray-400 mb-4"></p>
+<div class="flex justify-end space-x-2">
+<button onclick="document.getElementById('delete-folder-modal').style.display='none'" class="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300">取消</button>
+<button onclick="submitDeleteFolder()" class="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700">删除</button>
+</div></div></div>
+
 <script>
 function renameBucketFolder(name, parentPath) {
-    const newName = prompt('重命名目录:', name);
-    if (newName && newName !== name) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '/buckets/{{ bucket.id }}/folder/rename/';
-        form.innerHTML = '{% csrf_token %}<input type="hidden" name="old_path" value="' + parentPath + name + '/"><input type="hidden" name="new_name" value="' + newName + '"><input type="hidden" name="parent_path" value="{{ current_path }}">';
-        document.body.appendChild(form); form.submit();
+    document.getElementById('rename-folder-input').value = name;
+    document.getElementById('rename-folder-modal')._data = {oldPath: parentPath + name + '/'};
+    document.getElementById('rename-folder-modal')._onConfirm = null;
+    document.getElementById('rename-folder-modal').style.display = 'flex';
+}
+function renameBucketFile(name, fileId) {
+    document.getElementById('rename-folder-input').value = name;
+    document.getElementById('rename-folder-modal')._onConfirm = async function() {
+        const newName = document.getElementById('rename-folder-input').value.trim();
+        if (!newName) return;
+        document.getElementById('rename-folder-modal').style.display = 'none';
+        const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        const resp = await fetch('/buckets/{{ bucket.id }}/files/' + fileId + '/rename/', {
+            method: 'POST',
+            headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'name=' + encodeURIComponent(newName)
+        });
+        if (resp.status === 409) { showToast('文件 "' + newName + '" 已存在', 'error'); }
+        else if (resp.ok) { showToast('重命名成功', 'success'); location.reload(); }
+        else { showToast('重命名失败', 'error'); }
+    };
+    document.getElementById('rename-folder-modal').style.display = 'flex';
+}
+function submitRenameFolder() {
+    const modal = document.getElementById('rename-folder-modal');
+    if (modal._onConfirm) { modal._onConfirm(); }
+    else {
+        const input = document.getElementById('rename-folder-input');
+        const newName = input.value.trim();
+        const {oldPath} = modal._data || {};
+        if (newName && oldPath) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/buckets/{{ bucket.id }}/folder/rename/';
+            form.innerHTML = '{% csrf_token %}<input type="hidden" name="old_path" value="' + oldPath + '"><input type="hidden" name="new_name" value="' + newName + '"><input type="hidden" name="parent_path" value="{{ current_path }}">';
+            document.body.appendChild(form); form.submit();
+        }
     }
+    modal.style.display = 'none';
+    modal._onConfirm = null;
 }
 async function deleteBucketFolder(name, path) {
-    if (!confirm('确定删除目录 "' + name + '" 及其所有文件？此操作不可恢复。')) return;
-    const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
-    const resp = await fetch(location.href, {headers:{'X-CSRFToken': csrf}});
-    const html = await resp.text();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    const fileRows = doc.querySelectorAll('[data-item-type="bucketfile"]');
-    for (const r of fileRows) {
-        await fetch('/buckets/{{ bucket.id }}/files/' + r.dataset.itemId + '/delete/', {
-            method: 'POST', headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded'}, body: ''
+    document.getElementById('delete-folder-msg').textContent = '确定删除目录 "' + name + '" 及其所有文件？此操作不可恢复。';
+    document.getElementById('delete-folder-modal').style.display = 'flex';
+}
+async function submitDeleteFolder() {
+    const modal = document.getElementById('delete-folder-modal');
+    if (modal._onConfirm) { await modal._onConfirm(); }
+    else {
+        modal.style.display = 'none';
+        const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        const resp = await fetch(location.href, {headers:{'X-CSRFToken': csrf}});
+        const html = await resp.text();
+        new DOMParser().parseFromString(html, 'text/html').querySelectorAll('[data-item-type="bucketfile"]').forEach(async r => {
+            await fetch('/buckets/{{ bucket.id }}/files/' + r.dataset.itemId + '/delete/', {
+                method: 'POST', headers: {'X-CSRFToken': csrf}, body: ''
+            });
         });
+        setTimeout(() => location.reload(), 500);
     }
-    location.reload();
+    modal.style.display = 'none';
+    modal._onConfirm = null;
 }
 // 桶上传处理 — 与我的文件 uploadHandler 一致
 function bucketUploadHandler() {
@@ -286,14 +350,19 @@ function bucketUploadHandler() {
                 showToast('下载链接已复制', 'success');
             } catch(ex) { showToast('获取失败: ' + ex.message, 'error'); }
         } else if (action === 'delete-file') {
-            if (confirm('确定删除 "' + cur.name + '"？')) {
+            document.getElementById('delete-folder-msg').textContent = '确定删除 "' + cur.name + '"？';
+            document.getElementById('delete-folder-modal')._onConfirm = function() {
                 const f = document.createElement('form');
                 f.method='POST'; f.action='/buckets/{{ bucket.id }}/files/' + cur.id + '/delete/';
                 f.innerHTML='{% csrf_token %}'; document.body.appendChild(f); f.submit();
-            }
+            };
+            document.getElementById('delete-folder-modal').style.display = 'flex';
         } else if (action === 'rename-file') {
-            const newName = prompt('重命名文件:', cur.name);
-            if (newName && newName !== cur.name) {
+            document.getElementById('rename-folder-input').value = cur.name;
+            document.getElementById('rename-folder-modal')._onConfirm = async function() {
+                const newName = document.getElementById('rename-folder-input').value.trim();
+                if (!newName) return;
+                document.getElementById('rename-folder-modal').style.display = 'none';
                 const resp = await fetch('/buckets/{{ bucket.id }}/files/' + cur.id + '/rename/', {
                     method: 'POST',
                     headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded'},
@@ -308,21 +377,27 @@ function bucketUploadHandler() {
                     const msg = await resp.text();
                     showToast(msg || '重命名失败', 'error');
                 }
-            }
+            };
+            document.getElementById('rename-folder-modal').style.display = 'flex';
         } else if (action === 'download-folder') {
             window.location.href = '/buckets/{{ bucket.id }}/folder/download/?path=' + encodeURIComponent(cur.path);
         } else if (action === 'rename-folder') {
-            const newName = prompt('重命名目录:', cur.name);
-            if (newName && newName !== cur.name) {
+            document.getElementById('rename-folder-input').value = cur.name;
+            document.getElementById('rename-folder-modal')._onConfirm = function() {
+                const newName = document.getElementById('rename-folder-input').value.trim();
+                if (!newName) return;
+                document.getElementById('rename-folder-modal').style.display = 'none';
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = '/buckets/{{ bucket.id }}/folder/rename/';
                 form.innerHTML = '{% csrf_token %}<input type="hidden" name="old_path" value="' + cur.path + '"><input type="hidden" name="new_name" value="' + newName + '"><input type="hidden" name="parent_path" value="{{ current_path }}">';
                 document.body.appendChild(form); form.submit();
-            }
+            };
+            document.getElementById('rename-folder-modal').style.display = 'flex';
         } else if (action === 'delete-folder') {
-            if (confirm('确定删除目录 "' + cur.name + '" 及其所有文件？此操作不可恢复。')) {
-                // 删除该目录下的所有文件
+            document.getElementById('delete-folder-msg').textContent = '确定删除目录 "' + cur.name + '" 及其所有文件？此操作不可恢复。';
+            document.getElementById('delete-folder-modal')._onConfirm = async function() {
+                document.getElementById('delete-folder-modal').style.display = 'none';
                 const resp = await fetch(location.href, {headers:{'X-CSRFToken': csrf}});
                 const html = await resp.text();
                 const parser = new DOMParser();
@@ -334,7 +409,8 @@ function bucketUploadHandler() {
                     });
                 }
                 location.reload();
-            }
+            };
+            document.getElementById('delete-folder-modal').style.display = 'flex';
         }
     });
 })();
