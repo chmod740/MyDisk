@@ -320,7 +320,10 @@ def file_edit(request, file_id):
         file_obj.save(update_fields=['size', 'updated_at'])
         _recalc_storage(request.user)
         messages.success(request, f'"{file_obj.name}" 已保存')
-        return redirect('file_list')
+        redirect_url = reverse('file_list')
+        if file_obj.folder and not file_obj.folder.is_deleted:
+            redirect_url += f'?folder={file_obj.folder.id}'
+        return redirect(redirect_url)
 
     try:
         with open(file_obj.file.path, 'r', encoding='utf-8') as f:

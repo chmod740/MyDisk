@@ -1,6 +1,6 @@
 # Django Disk — Personal Cloud Storage
 
-A full-featured personal cloud storage system built with Django, supporting file management, object buckets, sharing, API keys, and user administration.
+A full-featured personal cloud storage system built with Django, supporting file management, object buckets, Markdown editing & preview, sharing, API keys, and user administration.
 
 [中文文档](README.md)
 
@@ -9,6 +9,8 @@ A full-featured personal cloud storage system built with Django, supporting file
 ### File Management
 - 📁 Unlimited folder nesting, drag-and-drop upload, batch operations
 - 👁 Inline preview for images, text, and PDFs
+- 📝 **Markdown Editor**: side-by-side live preview, toolbar + keyboard shortcuts, image upload
+- 🎨 **Markdown Rendering**: GFM tables/task lists + code highlighting + KaTeX math + Mermaid diagrams
 - 🗑 Recycle bin (Windows-style: collapsible folders, drill-down, smart merge restore)
 - 🔍 Search, sort, and pagination
 - 🖱 Right-click context menu (preview/download/rename/move/share/delete)
@@ -16,6 +18,9 @@ A full-featured personal cloud storage system built with Django, supporting file
 
 ### Object Buckets
 - 📦 S3-like object storage with public/private buckets
+- 📝 Markdown editing & rendering (full pipeline, same as file manager)
+- 📄 Auto-preview of README.md / index.md (index.md takes priority)
+- 🖼 In-editor image upload to same directory, auto-insert `![](url)`
 - 🔑 API Key management (create/revoke/delete, last-access tracking)
 - 🔗 Path-style download URLs + token-based auth for private buckets
 - 📂 In-bucket directory management + sidebar folder tree
@@ -25,7 +30,8 @@ A full-featured personal cloud storage system built with Django, supporting file
 - 🔗 Shareable links with optional password protection and expiration
 - 📦 Share files, folders, or buckets
 - 📥 Shared folders support individual file download and ZIP batch download
-- 👁 Share page preview (images/PDFs)
+- 👁 Share page Markdown rendering (code highlighting, math, diagrams)
+- 👁 Share page image/PDF preview
 
 ### Users & Permissions
 - 👤 Registration, login, profile
@@ -40,7 +46,7 @@ A full-featured personal cloud storage system built with Django, supporting file
 - 📖 Full API documentation (curl/Python/JS/Go/Java examples)
 
 ### Other
-- 🌓 Dark mode (global support)
+- 🌓 Dark mode (global, Markdown rendering adapts automatically)
 - 🌐 Bilingual README (EN/ZH)
 
 ## Quick Start
@@ -78,23 +84,29 @@ docker compose up -d
 |-------|-----------|
 | Backend | Django 6.0, Python 3.12 |
 | Frontend | Django Templates, HTMX 2.0, Alpine.js 3, Tailwind CSS (CDN) |
+| Markdown | marked.js (GFM), highlight.js, KaTeX, Mermaid |
 | Database | SQLite (dev) / PostgreSQL (prod) |
-| Deployment | Docker + Gunicorn + PostgreSQL |
+| Deployment | Docker + Gunicorn + PostgreSQL + Caddy |
 
 ## Project Structure
 
 ```
 django_disk/
 ├── accounts/         # Users, groups, site settings, captcha
-├── files/            # File management, folders, recycle bin
+├── files/            # File management, folders, recycle bin, Markdown editor
 ├── buckets/          # Buckets, bucket files, API keys, REST API
 ├── sharing/          # Share links, share pages
 ├── config/           # Django configuration
 ├── templates/        # Frontend templates
+│   ├── files/        #   File manager pages (Markdown edit/preview)
+│   ├── buckets/      #   Bucket pages (README preview)
+│   ├── sharing/      #   Share pages
+│   └── accounts/     #   Account pages
 ├── media/            # User uploads
 ├── static/           # Static assets
 ├── Dockerfile
 ├── docker-compose.yml
+├── Caddyfile
 └── requirements.txt
 ```
 

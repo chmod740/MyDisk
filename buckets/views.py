@@ -3,6 +3,7 @@ import os
 from uuid import UUID
 
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse, FileResponse, JsonResponse
@@ -581,7 +582,10 @@ def bucket_file_edit(request, pk, file_id):
         file_obj.size = len(new_content.encode('utf-8'))
         file_obj.save(update_fields=['size'])
         messages.success(request, f'"{file_obj.name}" 已保存')
-        return redirect('bucket_detail', pk=bucket.id)
+        redirect_url = reverse('bucket_detail', kwargs={'pk': bucket.id})
+        if file_obj.folder_path:
+            redirect_url += f'?path={file_obj.folder_path}'
+        return redirect(redirect_url)
 
     try:
         with open(file_obj.file.path, 'r', encoding='utf-8') as f:
