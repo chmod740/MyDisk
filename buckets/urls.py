@@ -12,6 +12,7 @@ urlpatterns = [
     path('<uuid:pk>/files/<uuid:file_id>/download-url/', views.bucket_file_download_url, name='bucket_file_download_url'),
     path('<uuid:pk>/files/<uuid:file_id>/preview/', views.bucket_file_preview, name='bucket_file_preview'),
     path('<uuid:pk>/files/<uuid:file_id>/edit/', views.bucket_file_edit, name='bucket_file_edit'),
+    path('<uuid:pk>/upload-image/', views.bucket_image_upload, name='bucket_image_upload'),
     path('<uuid:pk>/files/<uuid:file_id>/delete/', views.bucket_file_delete, name='bucket_file_delete'),
     path('<uuid:pk>/files/<uuid:file_id>/rename/', views.bucket_file_rename, name='bucket_file_rename'),
     path('<uuid:pk>/folder/rename/', views.bucket_folder_rename, name='bucket_folder_rename'),

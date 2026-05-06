@@ -272,6 +272,47 @@ def bucket_file_upload(request, pk):
     return HttpResponse(status=405)
 
 
+@login_required
+def bucket_image_upload(request, pk):
+    """上传图片到桶目录（markdown 编辑器使用）"""
+    bucket = get_object_or_404(Bucket, pk=pk, owner=request.user)
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    image = request.FILES.get('file')
+    if not image:
+        return JsonResponse({'error': '未选择文件'}, status=400)
+
+    if not image.content_type or not image.content_type.startswith('image/'):
+        return JsonResponse({'error': '仅支持图片文件'}, status=400)
+
+    folder_path = request.POST.get('folder_path', '').strip()
+    if folder_path and not folder_path.endswith('/'):
+        folder_path += '/'
+
+    # 处理同名冲突：自动重命名
+    original_name = image.name
+    while BucketFile.objects.filter(bucket=bucket, folder_path=folder_path, name=image.name).exists():
+        base, ext = os.path.splitext(original_name)
+        import uuid
+        image.name = f'{base}_{uuid.uuid4().hex[:6]}{ext}'
+
+    mime_type, _ = mimetypes.guess_type(image.name)
+    bf = BucketFile.objects.create(
+        bucket=bucket, name=image.name, file=image,
+        size=image.size, mime_type=mime_type or 'application/octet-stream',
+        folder_path=folder_path,
+    )
+
+    # 生成不带 token 的 URL（编辑页面已登录，无需 token）
+    file_path = (folder_path + image.name).strip('/')
+    base = request.build_absolute_uri('/')[:-1]
+    url = f'{base}/buckets/{bucket.id}/dl/{file_path}'
+
+    return JsonResponse({'url': url, 'filename': image.name})
+
+
 def bucket_file_download(request, pk, file_id):
     bucket = get_object_or_404(Bucket, pk=pk)
     can_access, reason = _check_access(request, bucket)

@@ -148,7 +148,8 @@
         <button title="任务列表" data-action="task">&#9744;</button>
         <span class="sep"></span>
         <button title="链接" data-action="link">&#128279;</button>
-        <button title="图片" data-action="image">&#128247;</button>
+        <button title="上传图片" data-action="image">&#128247;</button>
+        <input type="file" id="image-upload-input" accept="image/*" style="display:none">
         <button title="代码" data-action="code">&lt;/&gt;</button>
         <button title="代码块" data-action="codeblock">```</button>
         <button title="表格" data-action="table">&#9776;</button>
@@ -303,7 +304,7 @@
             case 'ol': insertLinePrefix('1. '); break;
             case 'task': insertLinePrefix('- [ ] '); break;
             case 'link': wrapSelection('[', '](url)', '链接文本'); break;
-            case 'image': wrapSelection('![', '](url)', '图片描述'); break;
+            case 'image': document.getElementById('image-upload-input').click(); break;
             case 'code': wrapSelection('`', '`', 'code'); break;
             case 'codeblock': wrapSelection('\n```\n', '\n```\n', '语言'); break;
             case 'table':
@@ -353,6 +354,54 @@
             }
             editor.focus();
         }
+    });
+
+    // ── Image upload ──
+    var imageInput = document.getElementById('image-upload-input');
+    var folderPath = '{{ file.folder_path }}';
+    var bucketId = '{{ bucket.id }}';
+
+    imageInput.addEventListener('change', function () {
+        var file = imageInput.files[0];
+        if (!file) return;
+
+        var csrf = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (!csrf) { showToast('CSRF token 未找到', 'error'); return; }
+
+        var fd = new FormData();
+        fd.append('file', file);
+        fd.append('folder_path', folderPath);
+
+        statusBar.textContent = '上传图片中...';
+
+        fetch('/buckets/' + bucketId + '/upload-image/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrf.value },
+            body: fd
+        })
+        .then(function (resp) { return resp.json(); })
+        .then(function (data) {
+            statusBar.textContent = '就绪';
+            if (data.error) {
+                showToast(data.error, 'error');
+                return;
+            }
+            var start = editor.selectionStart;
+            var text = editor.value;
+            var md = '![' + (data.filename || '图片') + '](' + data.url + ')';
+            editor.value = text.substring(0, start) + md + text.substring(start);
+            editor.setSelectionRange(start + md.length, start + md.length);
+            editor.focus();
+            render();
+            showToast('图片已上传并插入', 'success');
+        })
+        .catch(function (err) {
+            statusBar.textContent = '就绪';
+            showToast('上传失败: ' + err.message, 'error');
+        });
+
+        // Reset input so the same file can be re-selected
+        imageInput.value = '';
     });
 
     // ── Scroll sync ──
