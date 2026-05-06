@@ -313,7 +313,7 @@ def file_edit(request, file_id):
     if request.method == 'POST':
         new_content = request.POST.get('content', '')
         # 写入文件
-        with open(file_obj.file.path, 'w', encoding='utf-8') as f:
+        with open(file_obj.file.path, 'w', encoding='utf-8', newline='') as f:
             f.write(new_content)
         # 更新文件大小
         file_obj.size = len(new_content.encode('utf-8'))

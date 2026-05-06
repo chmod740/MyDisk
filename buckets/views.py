@@ -69,6 +69,18 @@ def bucket_detail(request, pk):
     # 当前目录中的文件
     files = bucket.files.filter(folder_path=current_path).order_by('-created_at')
 
+    # 检查当前目录下是否有 index.md 或 README.md（index.md 优先）
+    readme_file = None
+    readme_content = None
+    for readme_name in ['index.md', 'README.md']:
+        try:
+            readme_file = bucket.files.get(folder_path=current_path, name=readme_name)
+            with open(readme_file.file.path, 'r', encoding='utf-8') as f:
+                readme_content = f.read(50000)
+            break
+        except (BucketFile.DoesNotExist, Exception):
+            continue
+
     # 子目录（从所有文件的路径中提取，在当前层级下）
     all_paths = bucket.files.values_list('folder_path', flat=True).distinct()
     subfolders = set()
@@ -104,6 +116,8 @@ def bucket_detail(request, pk):
         'folder_tree': bucket_folder_tree,
         'folder': {'id': current_path} if current_path else None,
         'tree_link_prefix': f'/buckets/{pk}',
+        'readme_file': readme_file,
+        'readme_content': readme_content,
     })
 
 
@@ -521,7 +535,7 @@ def bucket_file_edit(request, pk, file_id):
 
     if request.method == 'POST':
         new_content = request.POST.get('content', '')
-        with open(file_obj.file.path, 'w', encoding='utf-8') as f:
+        with open(file_obj.file.path, 'w', encoding='utf-8', newline='') as f:
             f.write(new_content)
         file_obj.size = len(new_content.encode('utf-8'))
         file_obj.save(update_fields=['size'])
