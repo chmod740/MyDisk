@@ -115,6 +115,7 @@
     .preview-pane { height: 50vh; }
 }
 </style>
+{% include 'includes/markdown_theme.html' %}
 {% endblock %}
 
 {% block content %}
@@ -244,8 +245,7 @@
         if (preview.querySelector('.mermaid')) {
             clearTimeout(mermaidQueue);
             mermaidQueue = setTimeout(function () {
-                mermaid.initialize({ startOnLoad: false, theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default' });
-                mermaid.run({ querySelector: '.mermaid' });
+                window.renderMarkdownMermaid(preview);
             }, 300);
         }
 

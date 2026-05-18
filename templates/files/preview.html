@@ -66,6 +66,7 @@
     background-color: transparent;
 }
 </style>
+{% include 'includes/markdown_theme.html' %}
 {% endif %}
 {% endblock %}
 
@@ -175,8 +176,7 @@
 
                 // Render mermaid diagrams
                 if (typeof mermaid !== 'undefined' && el.querySelector('.mermaid')) {
-                    mermaid.initialize({ startOnLoad: false, theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default' });
-                    mermaid.run({ querySelector: '.mermaid' });
+                    window.renderMarkdownMermaid(el);
                 }
             })();
             </script>
