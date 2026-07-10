@@ -45,6 +45,7 @@ class Folder(models.Model):
 
     def soft_delete(self):
         from django.utils import timezone
+        self.share_links.all().delete()
         self.is_deleted = True
         self.deleted_at = timezone.now()
         self.save(update_fields=['is_deleted', 'deleted_at'])
@@ -102,6 +103,7 @@ class File(models.Model):
 
     def soft_delete(self):
         from django.utils import timezone
+        self.share_links.all().delete()
         self.is_deleted = True
         self.deleted_at = timezone.now()
         self.save(update_fields=['is_deleted', 'deleted_at'])

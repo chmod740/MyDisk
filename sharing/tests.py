@@ -1,12 +1,17 @@
+import io
+import zipfile
 from uuid import uuid4
 
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.cache import cache
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from datetime import timedelta
 
 from accounts.models import User
+from buckets.models import Bucket, BucketFile
 from files.models import Folder, File
 from .models import ShareLink
 
@@ -146,6 +151,7 @@ class ShareCreateTests(TestCase):
 
 class ShareAccessTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.user = User.objects.create_user('testuser', password='testpass123')
         self.client = Client()
 
@@ -233,6 +239,19 @@ class ShareAccessTests(TestCase):
         self.assertTemplateUsed(resp, 'sharing/share_password.html')
         self.assertContains(resp, '密码错误')
 
+    def test_share_password_rate_limit(self):
+        link = self._create_shared_file()
+        from django.contrib.auth.hashers import make_password
+        link.password = make_password('secret')
+        link.save()
+        url = reverse('share_access', args=[link.id])
+
+        for _ in range(5):
+            self.client.post(url, {'password': 'wrong'})
+        resp = self.client.post(url, {'password': 'wrong'})
+
+        self.assertEqual(resp.status_code, 429)
+
     def test_share_with_password_expires_at_none(self):
         """Permanent share with password, not expired"""
         link = self._create_shared_file()
@@ -276,6 +295,91 @@ class ShareAccessTests(TestCase):
         resp = self.client.get(url)
         self.assertNotContains(resp, 'deleted.txt')
 
+    def test_soft_deleted_file_revokes_share_link(self):
+        link = self._create_shared_file()
+        link.file.soft_delete()
+
+        self.assertFalse(ShareLink.objects.filter(pk=link.pk).exists())
+        resp = self.client.get(reverse('share_access', args=[link.id]))
+        self.assertContains(resp, '分享链接无效')
+
+    def test_deleted_target_is_rejected_defensively(self):
+        link = self._create_shared_file()
+        File.objects.filter(pk=link.file_id).update(is_deleted=True)
+
+        resp = self.client.get(reverse('share_access', args=[link.id]))
+
+        self.assertEqual(resp.status_code, 404)
+        self.assertContains(resp, '分享内容已删除', status_code=404)
+
+    def test_private_bucket_share_downloads_file(self):
+        bucket = Bucket.objects.create(name='private', owner=self.user)
+        bucket_file = BucketFile.objects.create(
+            bucket=bucket, name='secret.txt',
+            file=SimpleUploadedFile('secret.txt', b'secret'),
+            size=6, mime_type='text/plain',
+        )
+        link = ShareLink.objects.create(bucket=bucket, owner=self.user)
+
+        resp = self.client.get(
+            reverse('share_access', args=[link.id]),
+            {'dl_bucket_file': str(bucket_file.id)},
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(b''.join(resp.streaming_content), b'secret')
+
+    def test_bucket_share_cannot_download_other_bucket_file(self):
+        bucket = Bucket.objects.create(name='shared', owner=self.user)
+        other_bucket = Bucket.objects.create(name='other', owner=self.user)
+        other_file = BucketFile.objects.create(
+            bucket=other_bucket, name='other.txt',
+            file=SimpleUploadedFile('other.txt', b'other'),
+            size=5, mime_type='text/plain',
+        )
+        link = ShareLink.objects.create(bucket=bucket, owner=self.user)
+
+        resp = self.client.get(
+            reverse('share_access', args=[link.id]),
+            {'dl_bucket_file': str(other_file.id)},
+        )
+
+        self.assertEqual(resp.status_code, 404)
+
+    def test_shared_folder_zip_is_recursive(self):
+        folder = Folder.objects.create(name='Current', owner=self.user)
+        child = Folder.objects.create(name='Child', parent=folder, owner=self.user)
+        File.objects.create(
+            name='root.txt', file=SimpleUploadedFile('root.txt', b'root'),
+            size=4, mime_type='text/plain', folder=folder, owner=self.user,
+        )
+        File.objects.create(
+            name='nested.txt', file=SimpleUploadedFile('nested.txt', b'nested'),
+            size=6, mime_type='text/plain', folder=child, owner=self.user,
+        )
+        link = ShareLink.objects.create(folder=folder, owner=self.user)
+
+        resp = self.client.get(
+            reverse('share_access', args=[link.id]), {'download': 'zip'},
+        )
+        payload = b''.join(resp.streaming_content)
+        with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+            self.assertCountEqual(archive.namelist(), ['root.txt', 'Child/nested.txt'])
+
+    def test_markdown_share_uses_sanitized_rendering(self):
+        markdown = File.objects.create(
+            name='unsafe.md',
+            file=SimpleUploadedFile('unsafe.md', b'<img src=x onerror=alert(1)>'),
+            size=34, mime_type='text/markdown', owner=self.user,
+        )
+        link = ShareLink.objects.create(file=markdown, owner=self.user)
+
+        resp = self.client.get(reverse('share_access', args=[link.id]))
+
+        self.assertContains(resp, 'js/markdown-sanitize.js')
+        self.assertContains(resp, 'window.setSanitizedMarkdownHtml')
+        self.assertNotContains(resp, 'el.innerHTML = html')
+
 
 class ShareLinkModelTests(TestCase):
     def setUp(self):
@@ -295,8 +399,16 @@ class ShareLinkModelTests(TestCase):
         self.assertEqual(link.target, folder)
 
     def test_share_not_expired_without_expiry(self):
-        link = ShareLink.objects.create(owner=self.user)
+        f = File.objects.create(
+            name='f.txt', file=SimpleUploadedFile('f.txt', b'x'), size=1,
+            mime_type='text/plain', owner=self.user,
+        )
+        link = ShareLink.objects.create(file=f, owner=self.user)
         self.assertFalse(link.is_expired)
+
+    def test_share_requires_exactly_one_target(self):
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            ShareLink.objects.create(owner=self.user)
 
     def test_share_not_expired_future(self):
         f = File.objects.create(

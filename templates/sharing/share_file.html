@@ -1,9 +1,11 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="zh-CN" class="h-full">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ file.name }} - {{ site_name }} 分享</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="{% static 'js/markdown-sanitize.js' %}"></script>
     <script>
         tailwind.config = { darkMode: "class", theme: { extend: { colors: { primary: { 50: "#eff6ff", 100: "#dbeafe", 200: "#bfdbfe", 300: "#93c5fd", 400: "#60a5fa", 500: "#3b82f6", 600: "#2563eb", 700: "#1d4ed8" } } } }, darkMode: 'class' };
         if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
@@ -106,7 +108,7 @@
                     html = html.replace(/<pre><code class="language-mermaid">([\s\S]*?)<\/code><\/pre>/g,
                         '<pre class="mermaid">$1</pre>');
 
-                    el.innerHTML = html;
+                    window.setSanitizedMarkdownHtml(el, html);
 
                     if (el.querySelector('.mermaid')) {
                         window.renderMarkdownMermaid(el);

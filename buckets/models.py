@@ -31,11 +31,15 @@ class Bucket(models.Model):
 
     @property
     def file_count(self):
-        return self.files.count()
+        if hasattr(self, '_file_count'):
+            return self._file_count
+        return self.files.exclude(name='.keep').count()
 
     @property
     def total_size(self):
-        return self.files.aggregate(s=models.Sum('size'))['s'] or 0
+        if hasattr(self, '_total_size'):
+            return self._total_size or 0
+        return self.files.exclude(name='.keep').aggregate(s=models.Sum('size'))['s'] or 0
 
 
 class BucketFile(models.Model):

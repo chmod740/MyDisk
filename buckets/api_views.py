@@ -1,13 +1,20 @@
 """Bucket API — 通过 X-Api-Key 认证"""
 import mimetypes
-import os
 
 from django.http import JsonResponse, FileResponse
+from django.db import IntegrityError, transaction
+from django.db.models import Count, Q, Sum
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .api_auth import api_key_required
 from .models import Bucket, BucketFile
+from files.services import (
+    QuotaExceeded,
+    ensure_quota,
+    normalize_bucket_path,
+    validate_path_component,
+)
 
 
 def _bucket_json(b):
@@ -26,7 +33,10 @@ def api_bucket_list(request):
     """GET /api/buckets/ — 列出用户的所有桶"""
     if request.method != 'GET':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
-    buckets = Bucket.objects.filter(owner=request.user).order_by('-created_at')
+    buckets = Bucket.objects.filter(owner=request.user).annotate(
+        _file_count=Count('files', filter=~Q(files__name='.keep')),
+        _total_size=Sum('files__size', filter=~Q(files__name='.keep')),
+    ).order_by('-created_at')
     return JsonResponse({'buckets': [_bucket_json(b) for b in buckets]})
 
 
@@ -43,9 +53,10 @@ def api_bucket_create(request):
     except json.JSONDecodeError:
         data = request.POST
 
-    name = (data.get('name') or '').strip()
-    if not name:
-        return JsonResponse({'error': 'name is required'}, status=400)
+    try:
+        name = validate_path_component(data.get('name'), 'Bucket name')
+    except ValueError as exc:
+        return JsonResponse({'error': str(exc)}, status=400)
     if Bucket.objects.filter(owner=request.user, name=name).exists():
         return JsonResponse({'error': f'Bucket "{name}" already exists'}, status=409)
 
@@ -93,9 +104,10 @@ def api_bucket_file_list(request, pk):
     except Bucket.DoesNotExist:
         return JsonResponse({'error': 'Bucket not found'}, status=404)
 
-    path = request.GET.get('path', '').strip()
-    if path and not path.endswith('/'):
-        path += '/'
+    try:
+        path = normalize_bucket_path(request.GET.get('path'))
+    except ValueError as exc:
+        return JsonResponse({'error': str(exc)}, status=400)
     files = BucketFile.objects.filter(bucket=b, folder_path=path).exclude(name='.keep').order_by('-created_at')
 
     # 子目录
@@ -130,29 +142,46 @@ def api_bucket_file_upload(request, pk):
         return JsonResponse({'error': 'Bucket not found'}, status=404)
 
     uploaded_files = request.FILES.getlist('files')
-    folder_path = request.POST.get('folder_path', '').strip()
-    if folder_path and not folder_path.endswith('/'):
-        folder_path += '/'
+    try:
+        folder_path = normalize_bucket_path(request.POST.get('folder_path'))
+    except ValueError as exc:
+        return JsonResponse({'error': str(exc)}, status=400)
 
     if not uploaded_files:
         return JsonResponse({'error': 'No files provided'}, status=400)
 
-    created = []
-    for f in uploaded_files:
-        if f.name == '.keep':
-            continue
-        mime_type, _ = mimetypes.guess_type(f.name)
-        try:
-            bf = BucketFile.objects.create(
-                bucket=b, name=f.name, file=f, size=f.size,
-                mime_type=mime_type or 'application/octet-stream',
-                folder_path=folder_path,
-            )
-            created.append(_file_json(bf))
-        except Exception as e:
-            created.append({'name': f.name, 'error': str(e)})
+    real_files = [upload for upload in uploaded_files if upload.name != '.keep']
+    try:
+        for upload in real_files:
+            validate_path_component(upload.name, 'File name')
+    except ValueError as exc:
+        return JsonResponse({'error': str(exc)}, status=400)
 
-    return JsonResponse({'created': created, 'count': len([x for x in created if 'id' in x])}, status=201)
+    conflicts = list(BucketFile.objects.filter(
+        bucket=b, folder_path=folder_path,
+        name__in=[upload.name for upload in real_files],
+    ).values_list('name', flat=True))
+    if conflicts:
+        return JsonResponse({'error': 'Files already exist', 'conflicts': conflicts}, status=409)
+
+    created = []
+    try:
+        with transaction.atomic():
+            ensure_quota(request.user, sum(upload.size for upload in real_files))
+            for f in real_files:
+                mime_type, _ = mimetypes.guess_type(f.name)
+                bf = BucketFile.objects.create(
+                    bucket=b, name=f.name, file=f, size=f.size,
+                    mime_type=mime_type or 'application/octet-stream',
+                    folder_path=folder_path,
+                )
+                created.append(_file_json(bf))
+    except QuotaExceeded:
+        return JsonResponse({'error': 'Storage quota exceeded'}, status=413)
+    except IntegrityError:
+        return JsonResponse({'error': 'One or more files already exist'}, status=409)
+
+    return JsonResponse({'created': created, 'count': len(created)}, status=201)
 
 
 @csrf_exempt
@@ -173,7 +202,6 @@ def api_bucket_file_delete(request, pk, file_id):
         return JsonResponse({'error': 'File not found'}, status=404)
 
     name = bf.name
-    bf.file.delete(save=False)
     bf.delete()
     return JsonResponse({'deleted': name})
 
@@ -198,11 +226,11 @@ def api_bucket_folder_create(request, pk):
     except json.JSONDecodeError:
         data = request.POST
 
-    folder_name = (data.get('name') or '').strip()
-    parent_path = (data.get('parent_path') or '').strip()
-
-    if not folder_name:
-        return JsonResponse({'error': 'name is required'}, status=400)
+    try:
+        folder_name = validate_path_component(data.get('name'), 'Folder name')
+        parent_path = normalize_bucket_path(data.get('parent_path'))
+    except ValueError as exc:
+        return JsonResponse({'error': str(exc)}, status=400)
 
     full_path = (parent_path.rstrip('/') + '/' if parent_path else '') + folder_name + '/'
 
@@ -230,16 +258,14 @@ def api_bucket_folder_delete(request, pk):
     except Bucket.DoesNotExist:
         return JsonResponse({'error': 'Bucket not found'}, status=404)
 
-    path = request.GET.get('path', '').strip()
-    if not path:
-        return JsonResponse({'error': 'path parameter is required'}, status=400)
-    if not path.endswith('/'):
-        path += '/'
+    try:
+        path = normalize_bucket_path(request.GET.get('path'), allow_empty=False)
+    except ValueError as exc:
+        return JsonResponse({'error': str(exc)}, status=400)
 
     count = 0
-    for bf in BucketFile.objects.filter(bucket=b, folder_path__startswith=path):
-        bf.file.delete(save=False)
-        bf.delete()
-        count += 1
+    queryset = BucketFile.objects.filter(bucket=b, folder_path__startswith=path)
+    count = queryset.count()
+    queryset.delete()
 
     return JsonResponse({'deleted': count, 'path': path})

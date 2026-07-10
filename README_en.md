@@ -4,6 +4,13 @@ A full-featured personal cloud storage system built with Django, supporting file
 
 [中文文档](README.md)
 
+## Project Status
+
+- Django unit tests: all 223 tests pass
+- Production configuration: `python manage.py check --deploy` passes
+- Database migrations: `makemigrations --check --dry-run` reports no missing migrations
+- CI: GitHub Actions runs unit tests and Playwright E2E in separate jobs
+
 ## Features
 
 ### File Management
@@ -43,10 +50,14 @@ A full-featured personal cloud storage system built with Django, supporting file
 - 🔐 All endpoints authenticated via `X-Api-Key` header
 - 📦 Bucket CRUD + file upload/list/delete
 - 📂 File management CRUD
-- 📖 Full API documentation (curl/Python/JS/Go/Java examples)
+- 📖 Full API documentation for common bucket, file, and folder operations
+- 🌐 Examples for cURL, JavaScript/TypeScript, Python, Go, PHP, Java, C#/.NET, and Ruby
 
 ### Other
 - 🌓 Dark mode (global, Markdown rendering adapts automatically)
+- 🛡 Allowlist-based Markdown sanitization for scripts, event handlers, and unsafe URLs
+- 📊 Enforced storage quotas, consistent usage accounting, and post-commit file cleanup
+- 📥 Temporary-file ZIP streaming with Zip Slip path validation
 - 🌐 Bilingual README (EN/ZH)
 
 ## Quick Start
@@ -54,29 +65,40 @@ A full-featured personal cloud storage system built with Django, supporting file
 ### Development
 
 ```bash
-# Install dependencies
-pip install django pillow
+# Create an environment and install dependencies
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
 
 # Initialize database
 python manage.py migrate
 
-# Create admin user
-python manage.py shell -c "
-from accounts.models import User
-User.objects.create_superuser('admin', 'admin@example.com', 'admin123')
-"
+# Create an admin user
+python manage.py createsuperuser
 
 # Start server
 python manage.py runserver 8000
 ```
 
-Open http://localhost:8000 and login with `admin / admin123`.
+Open http://localhost:8000 and sign in with the account you created. `manage.py` uses `config.settings_dev` for local development.
 
 ### Docker Deployment
 
 ```bash
+cp .env.example .env
+# Edit .env and set random, strong database and Django secret values.
 docker compose up -d
 ```
+
+Production requires `DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS`, and the database password. HTTPS redirect, HSTS, and secure cookies are enabled when `DJANGO_DEBUG=false`; the reverse proxy must send `X-Forwarded-Proto: https`.
+
+| Variable | Description |
+|---|---|
+| `DJANGO_SECRET_KEY` | Required in production; use at least 50 random characters |
+| `DJANGO_ALLOWED_HOSTS` | Comma-separated host names |
+| `DJANGO_CSRF_TRUSTED_ORIGINS` | Comma-separated HTTPS origins |
+| `DJANGO_DEBUG` | Must be `false` in production |
+| `DATABASE_URL` | PostgreSQL URL with encoded credentials and query options supported |
 
 ## Tech Stack
 
@@ -87,6 +109,8 @@ docker compose up -d
 | Markdown | marked.js (GFM), highlight.js, KaTeX, Mermaid |
 | Database | SQLite (dev) / PostgreSQL (prod) |
 | Deployment | Docker + Gunicorn + PostgreSQL + Caddy |
+
+The Markdown sanitizer is served locally. Tailwind, HTMX, Marked, KaTeX, Mermaid, and related frontend packages still use public CDNs; mirror them into local static assets for offline deployments.
 
 ## Project Structure
 
@@ -104,6 +128,7 @@ django_disk/
 │   └── accounts/     #   Account pages
 ├── media/            # User uploads
 ├── static/           # Static assets
+├── .github/workflows/ # Unit and Playwright E2E CI
 ├── Dockerfile
 ├── docker-compose.yml
 ├── Caddyfile
@@ -116,7 +141,26 @@ django_disk/
 # Unit tests
 python manage.py test accounts buckets sharing files
 
+# Confirm that model changes have migrations
+python manage.py makemigrations --check --dry-run
+
 # E2E tests (start server first)
 python manage.py runserver 8000 &
 python tests_e2e.py
 ```
+
+GitHub Actions runs unit tests and Playwright E2E tests as separate jobs.
+
+## Operations
+
+```bash
+python manage.py recalculate_storage
+python manage.py recalculate_storage --user username
+python manage.py cleanup_trash
+```
+
+## ZIP Naming
+
+Directory downloads use the current directory name for the ZIP, never the parent directory name. A bucket-root download uses the bucket name, and archive entries are relative to the downloaded directory.
+
+The authenticated API documentation is available at `/buckets/api-keys/docs/`.

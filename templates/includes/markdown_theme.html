@@ -1,0 +1,184 @@
+<style>
+.markdown-body {
+    --color-canvas-default: #ffffff;
+    --color-canvas-subtle: #f6f8fa;
+    --color-fg-default: #1f2328;
+    --color-fg-muted: #656d76;
+    --color-fg-subtle: #6e7781;
+    --color-border-default: #d0d7de;
+    --color-border-muted: #d8dee4;
+    --color-neutral-muted: rgba(175,184,193,0.2);
+    --color-accent-fg: #0969da;
+    --color-accent-emphasis: #0969da;
+    --color-danger-fg: #cf222e;
+    --bgColor-default: #ffffff;
+    --bgColor-muted: #f6f8fa;
+    --bgColor-neutral-muted: rgba(175,184,193,0.2);
+    --fgColor-default: #1f2328;
+    --fgColor-muted: #656d76;
+    --fgColor-accent: #0969da;
+    --borderColor-default: #d0d7de;
+    --borderColor-muted: #d8dee4;
+    color-scheme: light;
+    background-color: #ffffff;
+    color: #1f2328;
+}
+.dark .markdown-body {
+    --color-canvas-default: #0d1117;
+    --color-canvas-subtle: #161b22;
+    --color-canvas-inset-shadow: none;
+    --color-fg-default: #e6edf3;
+    --color-fg-muted: #8b949e;
+    --color-fg-subtle: #6e7681;
+    --color-border-default: #30363d;
+    --color-border-muted: #21262d;
+    --color-neutral-muted: rgba(110,118,129,0.4);
+    --color-accent-fg: #58a6ff;
+    --color-accent-emphasis: #1f6feb;
+    --color-danger-fg: #f85149;
+    --color-prettylights-syntax-comment: #8b949e;
+    --color-prettylights-syntax-constant: #79c0ff;
+    --color-prettylights-syntax-entity: #d2a8ff;
+    --color-prettylights-syntax-storage-modifier-import: #c9d1d9;
+    --color-prettylights-syntax-entity-tag: #7ee787;
+    --color-prettylights-syntax-keyword: #ff7b72;
+    --color-prettylights-syntax-string: #a5d6ff;
+    --color-prettylights-syntax-variable: #ffa657;
+    --color-prettylights-syntax-brackethighlighter-unmatched: #f85149;
+    --color-prettylights-syntax-invalid-illegal-text: #f0f6fc;
+    --color-prettylights-syntax-invalid-illegal-bg: #8e1519;
+    --color-prettylights-syntax-carriage-return-text: #f0f6fc;
+    --color-prettylights-syntax-carriage-return-bg: #b62324;
+    --color-prettylights-syntax-string-regexp: #7ee787;
+    --color-prettylights-syntax-markup-list: #f2cc60;
+    --color-prettylights-syntax-markup-heading: #1f6feb;
+    --color-prettylights-syntax-markup-italic: #c9d1d9;
+    --color-prettylights-syntax-markup-bold: #c9d1d9;
+    --color-prettylights-syntax-markup-deleted-text: #ffdcd7;
+    --color-prettylights-syntax-markup-deleted-bg: #67060c;
+    --color-prettylights-syntax-markup-inserted-text: #aff5b4;
+    --color-prettylights-syntax-markup-inserted-bg: #033a16;
+    --color-prettylights-syntax-markup-changed-text: #ffdfb6;
+    --color-prettylights-syntax-markup-changed-bg: #5a1e02;
+    --color-prettylights-syntax-markup-ignored-text: #c9d1d9;
+    --color-prettylights-syntax-markup-ignored-bg: #1158c7;
+    --color-prettylights-syntax-meta-diff-range: #d2a8ff;
+    --color-prettylights-syntax-brackethighlighter-angle: #8b949e;
+    --color-prettylights-syntax-sublimelinter-gutter-mark: #484f58;
+    --color-prettylights-syntax-constant-other-reference-link: #a5d6ff;
+    --bgColor-default: #0d1117;
+    --bgColor-muted: #161b22;
+    --bgColor-neutral-muted: rgba(110,118,129,0.4);
+    --fgColor-default: #e6edf3;
+    --fgColor-muted: #8b949e;
+    --fgColor-accent: #58a6ff;
+    --borderColor-default: #30363d;
+    --borderColor-muted: #21262d;
+    color-scheme: dark;
+    background-color: #0d1117;
+    color: #e6edf3;
+}
+.dark .markdown-body img {
+    background-color: transparent;
+}
+.dark .markdown-body .hljs {
+    background: transparent;
+    color: #e6edf3;
+}
+.dark .markdown-body .hljs-comment,
+.dark .markdown-body .hljs-quote {
+    color: #8b949e;
+}
+.dark .markdown-body .hljs-keyword,
+.dark .markdown-body .hljs-selector-tag,
+.dark .markdown-body .hljs-subst {
+    color: #ff7b72;
+}
+.dark .markdown-body .hljs-literal,
+.dark .markdown-body .hljs-number,
+.dark .markdown-body .hljs-tag .hljs-attr,
+.dark .markdown-body .hljs-template-variable,
+.dark .markdown-body .hljs-variable {
+    color: #79c0ff;
+}
+.dark .markdown-body .hljs-doctag,
+.dark .markdown-body .hljs-string {
+    color: #a5d6ff;
+}
+.dark .markdown-body .hljs-section,
+.dark .markdown-body .hljs-selector-id,
+.dark .markdown-body .hljs-title {
+    color: #d2a8ff;
+}
+.dark .markdown-body .hljs-built_in,
+.dark .markdown-body .hljs-symbol {
+    color: #ffa657;
+}
+.dark .markdown-body .hljs-attr,
+.dark .markdown-body .hljs-attribute,
+.dark .markdown-body .hljs-name,
+.dark .markdown-body .hljs-selector-class,
+.dark .markdown-body .hljs-selector-attr,
+.dark .markdown-body .hljs-selector-pseudo,
+.dark .markdown-body .hljs-template-tag,
+.dark .markdown-body .hljs-type {
+    color: #7ee787;
+}
+.dark .markdown-body .hljs-bullet {
+    color: #f2cc60;
+}
+.dark .markdown-body .hljs-deletion {
+    background-color: #67060c;
+    color: #ffdcd7;
+}
+.dark .markdown-body .hljs-addition {
+    background-color: #033a16;
+    color: #aff5b4;
+}
+.dark .markdown-body .mermaid svg {
+    background: transparent;
+}
+</style>
+<script>
+(function () {
+    window.markdownThemeIsDark = function () {
+        return document.documentElement.classList.contains('dark');
+    };
+
+    window.renderMarkdownMermaid = function (root) {
+        if (typeof mermaid === 'undefined') return;
+        root = root || document;
+        var blocks = root.querySelectorAll('.mermaid');
+        if (!blocks.length) return;
+
+        blocks.forEach(function (block) {
+            if (!block.dataset.mermaidSource) {
+                block.dataset.mermaidSource = block.textContent;
+            } else if (block.dataset.processed) {
+                block.textContent = block.dataset.mermaidSource;
+                block.removeAttribute('data-processed');
+            }
+        });
+
+        mermaid.initialize({
+            startOnLoad: false,
+            theme: window.markdownThemeIsDark() ? 'dark' : 'default',
+            securityLevel: 'strict',
+            flowchart: { htmlLabels: false }
+        });
+        mermaid.run({ nodes: Array.prototype.slice.call(blocks) });
+    };
+
+    if (!window.markdownThemeObserver) {
+        window.markdownThemeObserver = new MutationObserver(function () {
+            document.querySelectorAll('.markdown-body').forEach(function (body) {
+                window.renderMarkdownMermaid(body);
+            });
+        });
+        window.markdownThemeObserver.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['class']
+        });
+    }
+})();
+</script>

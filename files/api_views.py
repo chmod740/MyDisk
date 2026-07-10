@@ -4,10 +4,12 @@ import os
 from uuid import UUID
 
 from django.http import JsonResponse, FileResponse
+from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
 
 from buckets.api_auth import api_key_required
 from .models import Folder, File
+from .services import QuotaExceeded, ensure_quota, validate_path_component
 
 
 def _file_json(f):
@@ -70,18 +72,26 @@ def api_file_upload(request):
     if not uploaded_files:
         return JsonResponse({'error': 'No files provided'}, status=400)
 
+    try:
+        for upload in uploaded_files:
+            validate_path_component(upload.name, '文件名')
+    except ValueError as exc:
+        return JsonResponse({'error': str(exc)}, status=400)
+
     created = []
-    for f in uploaded_files:
-        mime_type, _ = mimetypes.guess_type(f.name)
-        try:
-            file_obj = File.objects.create(
-                name=f.name, file=f, size=f.size,
-                mime_type=mime_type or 'application/octet-stream',
-                folder=folder, owner=request.user,
-            )
-            created.append(_file_json(file_obj))
-        except Exception as e:
-            created.append({'name': f.name, 'error': str(e)})
+    try:
+        with transaction.atomic():
+            ensure_quota(request.user, sum(f.size for f in uploaded_files))
+            for f in uploaded_files:
+                mime_type, _ = mimetypes.guess_type(f.name)
+                file_obj = File.objects.create(
+                    name=f.name, file=f, size=f.size,
+                    mime_type=mime_type or 'application/octet-stream',
+                    folder=folder, owner=request.user,
+                )
+                created.append(_file_json(file_obj))
+    except QuotaExceeded:
+        return JsonResponse({'error': 'Storage quota exceeded'}, status=413)
 
     return JsonResponse({'created': created}, status=201)
 
@@ -131,11 +141,11 @@ def api_folder_create(request):
     except json.JSONDecodeError:
         data = request.POST
 
-    name = (data.get('name') or '').strip()
+    try:
+        name = validate_path_component(data.get('name'), '文件夹名')
+    except ValueError as exc:
+        return JsonResponse({'error': str(exc)}, status=400)
     parent_id = (data.get('parent') or data.get('parent_id') or '').strip() or None
-
-    if not name:
-        return JsonResponse({'error': 'name is required'}, status=400)
 
     parent = None
     if parent_id:

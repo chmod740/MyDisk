@@ -232,7 +232,7 @@
         html = html.replace(/<pre><code class="language-mermaid">([\s\S]*?)<\/code><\/pre>/g,
             '<pre class="mermaid">$1</pre>');
 
-        preview.innerHTML = html;
+        window.setSanitizedMarkdownHtml(preview, html);
 
         if (preview.querySelector('.mermaid')) {
             clearTimeout(mermaidQueue);

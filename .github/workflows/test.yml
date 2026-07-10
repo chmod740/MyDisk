@@ -1,0 +1,40 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python manage.py test accounts files buckets sharing
+      - run: python manage.py makemigrations --check --dry-run
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - run: playwright install --with-deps chromium
+      - run: python manage.py migrate --noinput
+      - name: Start Django
+        run: |
+          python manage.py runserver 127.0.0.1:8000 > /tmp/django-disk.log 2>&1 &
+          for attempt in {1..30}; do
+            curl --fail --silent http://127.0.0.1:8000/accounts/login/ && exit 0
+            sleep 1
+          done
+          cat /tmp/django-disk.log
+          exit 1
+      - run: python tests_e2e.py

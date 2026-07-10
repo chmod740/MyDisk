@@ -3,6 +3,22 @@ from django.db import models
 from django.conf import settings
 
 
+def _target_constraint():
+    condition = (
+        models.Q(file__isnull=False, folder__isnull=True, bucket__isnull=True)
+        | models.Q(file__isnull=True, folder__isnull=False, bucket__isnull=True)
+        | models.Q(file__isnull=True, folder__isnull=True, bucket__isnull=False)
+    )
+    try:
+        return models.CheckConstraint(
+            name='sharelink_exactly_one_target', condition=condition,
+        )
+    except TypeError:
+        return models.CheckConstraint(
+            name='sharelink_exactly_one_target', check=condition,
+        )
+
+
 class ShareLink(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     file = models.ForeignKey('files.File', on_delete=models.CASCADE, null=True, blank=True,
@@ -22,6 +38,7 @@ class ShareLink(models.Model):
         verbose_name = '分享链接'
         verbose_name_plural = '分享链接'
         ordering = ['-created_at']
+        constraints = [_target_constraint()]
 
     def __str__(self):
         target = self.file or self.folder or self.bucket

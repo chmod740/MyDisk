@@ -1,16 +1,17 @@
-import io
-import zipfile
 from uuid import UUID
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import HttpResponse, FileResponse
+from django.http import FileResponse
+from django.db.models import F
 from django.utils import timezone
 from django.contrib.auth.hashers import make_password, check_password
 
 from files.models import File, Folder
+from files.services import folder_zip_entries, zip_file_response
 from buckets.models import Bucket, BucketFile
+from accounts.throttling import clear_failures, record_failure, request_identifier, throttle_exceeded
 from .models import ShareLink
 
 
@@ -100,17 +101,30 @@ def share_access(request, share_id):
     if link.is_expired:
         return render(request, 'sharing/share_error.html', {'error': '分享链接已过期'})
 
-    if link.password:
-        if request.method == 'POST' and request.POST.get('password'):
-            if check_password(request.POST['password'], link.password):
-                request.session[f'share_auth_{link.id}'] = True
-            else:
-                return render(request, 'sharing/share_password.html', {'link': link, 'error': '密码错误'})
-        elif not request.session.get(f'share_auth_{link.id}'):
-            return render(request, 'sharing/share_password.html', {'link': link})
+    if (link.file and link.file.is_deleted) or (link.folder and link.folder.is_deleted):
+        return render(request, 'sharing/share_error.html', {'error': '分享内容已删除'}, status=404)
 
-    link.view_count += 1
-    link.save(update_fields=['view_count'])
+    if link.password:
+        session_key = f'share_auth_{link.id}'
+        if not request.session.get(session_key):
+            throttle_id = request_identifier(request, link.id)
+            if throttle_exceeded('share', throttle_id):
+                return render(
+                    request, 'sharing/share_password.html',
+                    {'link': link, 'error': '尝试次数过多，请稍后再试'}, status=429,
+                )
+            if request.method == 'POST' and request.POST.get('password'):
+                if check_password(request.POST['password'], link.password):
+                    clear_failures('share', throttle_id)
+                    request.session[session_key] = True
+                else:
+                    record_failure('share', throttle_id)
+                    return render(request, 'sharing/share_password.html', {'link': link, 'error': '密码错误'})
+            else:
+                return render(request, 'sharing/share_password.html', {'link': link})
+
+    ShareLink.objects.filter(pk=link.pk).update(view_count=F('view_count') + 1)
+    link.refresh_from_db(fields=['view_count'])
 
     # 下载请求
     if request.GET.get('download') == '1' and link.file:
@@ -125,18 +139,26 @@ def share_access(request, share_id):
         except (File.DoesNotExist, ValueError):
             return render(request, 'sharing/share_error.html', {'error': '文件不存在'})
 
+    bucket_file_id = request.GET.get('dl_bucket_file')
+    if bucket_file_id and link.bucket:
+        try:
+            bucket_file = BucketFile.objects.get(
+                id=UUID(bucket_file_id), bucket=link.bucket,
+            )
+            if bucket_file.name == '.keep':
+                raise BucketFile.DoesNotExist
+            return FileResponse(
+                bucket_file.file, as_attachment=True, filename=bucket_file.name,
+            )
+        except (BucketFile.DoesNotExist, ValueError):
+            return render(request, 'sharing/share_error.html', {'error': '文件不存在'}, status=404)
+
     # 打包下载整个分享文件夹
     if request.GET.get('download') == 'zip' and link.folder:
-        import io, zipfile
-        files = File.objects.filter(folder=link.folder, is_deleted=False)
-        buf = io.BytesIO()
-        with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
-            for f in files:
-                zf.write(f.file.path, f.name)
-        buf.seek(0)
-        resp = HttpResponse(buf, content_type='application/zip')
-        resp['Content-Disposition'] = f'attachment; filename="{link.folder.name}.zip"'
-        return resp
+        try:
+            return zip_file_response(folder_zip_entries(link.folder), link.folder.name)
+        except ValueError:
+            return render(request, 'sharing/share_error.html', {'error': '文件夹包含非法路径'}, status=400)
 
     if link.file:
         ctx = {'link': link, 'file': link.file}
@@ -144,8 +166,8 @@ def share_access(request, share_id):
             try:
                 with open(link.file.file.path, 'r', encoding='utf-8') as fh:
                     ctx['file_content'] = fh.read(50000)
-            except Exception as e:
-                ctx['file_content'] = f'[读取错误: {type(e).__name__} — {e}]'
+            except (OSError, UnicodeError):
+                ctx['file_content'] = '[读取错误: 无法读取文件]'
         return render(request, 'sharing/share_file.html', ctx)
     elif link.folder:
         # 预览文件夹中的单个文件
@@ -158,8 +180,8 @@ def share_access(request, share_id):
                     try:
                         with open(pf.file.path, 'r', encoding='utf-8') as fh:
                             ctx['file_content'] = fh.read(50000)
-                    except Exception as e:
-                        ctx['file_content'] = f'[读取错误: {type(e).__name__} — {e}]'
+                    except (OSError, UnicodeError):
+                        ctx['file_content'] = '[读取错误: 无法读取文件]'
                 # HTMX 请求返回 partial，否则返回完整页面
                 tmpl = 'sharing/_share_preview_partial.html' if request.headers.get('HX-Request') else 'sharing/share_file.html'
                 return render(request, tmpl, ctx)
@@ -173,7 +195,7 @@ def share_access(request, share_id):
             'files': files, 'subfolders': subfolders,
         })
     elif link.bucket:
-        bucket_files = BucketFile.objects.filter(bucket=link.bucket).order_by('-created_at')
+        bucket_files = BucketFile.objects.filter(bucket=link.bucket).exclude(name='.keep').order_by('-created_at')
         return render(request, 'sharing/share_bucket.html', {
             'link': link, 'bucket': link.bucket, 'files': bucket_files,
         })

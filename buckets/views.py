@@ -7,9 +7,20 @@ from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse, FileResponse, JsonResponse
+from django.db import transaction
+from django.db.models import Count, Q, Sum
 from django.utils import timezone
 
 from .models import Bucket, BucketFile, ApiKey
+from files.services import (
+    QuotaExceeded,
+    ensure_quota,
+    normalize_bucket_path,
+    replace_stored_file,
+    replace_text_content,
+    validate_path_component,
+    zip_file_response,
+)
 
 
 def _check_access(request, bucket):
@@ -27,19 +38,22 @@ def _check_access(request, bucket):
 
 @login_required
 def bucket_list(request):
-    buckets = Bucket.objects.filter(owner=request.user).prefetch_related('files')
+    buckets = Bucket.objects.filter(owner=request.user).annotate(
+        _file_count=Count('files', filter=~Q(files__name='.keep')),
+        _total_size=Sum('files__size', filter=~Q(files__name='.keep')),
+    )
     return render(request, 'buckets/list.html', {'buckets': buckets})
 
 
 @login_required
 def bucket_create(request):
     if request.method == 'POST':
-        name = request.POST.get('name', '').strip()
-        is_public = request.POST.get('is_public') == 'on'
-
-        if not name:
-            messages.error(request, '桶名称不能为空')
+        try:
+            name = validate_path_component(request.POST.get('name'), '桶名称')
+        except ValueError as exc:
+            messages.error(request, str(exc))
             return render(request, 'buckets/list.html', {'buckets': Bucket.objects.filter(owner=request.user)})
+        is_public = request.POST.get('is_public') == 'on'
 
         if Bucket.objects.filter(owner=request.user, name=name).exists():
             messages.error(request, f'桶 "{name}" 已存在')
@@ -63,9 +77,10 @@ def bucket_detail(request, pk):
         return redirect('bucket_list')
 
     # 当前浏览的目录路径
-    current_path = request.GET.get('path', '').strip()
-    if current_path and not current_path.endswith('/'):
-        current_path += '/'
+    try:
+        current_path = normalize_bucket_path(request.GET.get('path'))
+    except ValueError as exc:
+        return HttpResponse(str(exc), status=400)
 
     # 当前目录中的文件
     files = bucket.files.filter(folder_path=current_path).order_by('-created_at')
@@ -79,7 +94,9 @@ def bucket_detail(request, pk):
             with open(readme_file.file.path, 'r', encoding='utf-8') as f:
                 readme_content = f.read(50000)
             break
-        except (BucketFile.DoesNotExist, Exception):
+        except BucketFile.DoesNotExist:
+            continue
+        except (OSError, UnicodeError):
             continue
 
     # 子目录（从所有文件的路径中提取，在当前层级下）
@@ -167,11 +184,10 @@ def bucket_folder_create(request, pk):
     """在桶中创建目录"""
     bucket = get_object_or_404(Bucket, pk=pk, owner=request.user)
     if request.method == 'POST':
-        folder_name = request.POST.get('name', '').strip()
-        parent_path = request.POST.get('parent_path', '').strip()
-        if not folder_name:
-            messages.error(request, '目录名不能为空')
-        else:
+        parent_path = ''
+        try:
+            folder_name = validate_path_component(request.POST.get('name'), '目录名')
+            parent_path = normalize_bucket_path(request.POST.get('parent_path'))
             full_path = (parent_path.rstrip('/') + '/' if parent_path else '') + folder_name + '/'
             # 检测同名目录
             if BucketFile.objects.filter(bucket=bucket, folder_path=full_path, name='.keep').exists():
@@ -185,6 +201,8 @@ def bucket_folder_create(request, pk):
                     size=1, mime_type='application/x-directory',
                 )
                 messages.success(request, f'目录 "{folder_name}" 创建成功')
+        except ValueError as exc:
+            messages.error(request, str(exc))
         redirect_url = f'/buckets/{pk}/'
         if parent_path:
             redirect_url += f'?path={parent_path}'
@@ -200,9 +218,10 @@ def bucket_file_upload(request, pk):
 
     if request.method == 'POST':
         uploaded_files = request.FILES.getlist('files')
-        folder_path = request.POST.get('folder_path', '').strip()
-        if folder_path and not folder_path.endswith('/'):
-            folder_path += '/'
+        try:
+            folder_path = normalize_bucket_path(request.POST.get('folder_path'))
+        except ValueError as exc:
+            return JsonResponse({'error': str(exc)}, status=400)
 
         if not uploaded_files:
             messages.error(request, '未选择文件')
@@ -212,6 +231,11 @@ def bucket_file_upload(request, pk):
         real_files = [f for f in uploaded_files if f.name != '.keep']
         if not real_files:
             return JsonResponse({'created': 0, 'status': 'ok'})
+        try:
+            for upload in real_files:
+                validate_path_component(upload.name, '文件名')
+        except ValueError as exc:
+            return JsonResponse({'error': str(exc)}, status=400)
 
         # 检查同名冲突
         new_names = [f.name for f in real_files]
@@ -224,39 +248,59 @@ def bucket_file_upload(request, pk):
         if conflicts and resolve_mode != 'resolved':
             return JsonResponse({'conflicts': conflicts, 'status': 'conflict'}, status=409)
 
+        existing_files = {
+            f.name: f for f in BucketFile.objects.filter(
+                bucket=bucket, folder_path=folder_path, name__in=existing,
+            )
+        }
+        net_size = 0
+        for upload in real_files:
+            action = request.POST.get(f'_action_{upload.name}', 'skip') if upload.name in existing else 'create'
+            if action == 'skip':
+                continue
+            if action == 'overwrite':
+                net_size += upload.size - existing_files[upload.name].size
+            else:
+                net_size += upload.size
         created = 0
         overwritten = 0
         skipped = 0
-        for f in real_files:
-            if f.name in existing and resolve_mode == 'resolved':
-                action = request.POST.get(f'_action_{f.name}', 'skip')
-                if action == 'skip':
-                    skipped += 1
-                    continue
-                elif action == 'overwrite':
-                    old = BucketFile.objects.get(bucket=bucket, folder_path=folder_path, name=f.name)
-                    old.file.delete(save=False)
-                    old.delete()
-                    overwritten += 1
-                elif action == 'rename':
-                    base, ext = os.path.splitext(f.name)
-                    counter = 1
-                    new_name = f'{base} ({counter}){ext}'
-                    while BucketFile.objects.filter(bucket=bucket, folder_path=folder_path, name=new_name).exists():
-                        counter += 1
-                        new_name = f'{base} ({counter}){ext}'
-                    f.name = new_name
+        try:
+            with transaction.atomic():
+                ensure_quota(request.user, net_size)
+                for f in real_files:
+                    if f.name in existing and resolve_mode == 'resolved':
+                        action = request.POST.get(f'_action_{f.name}', 'skip')
+                        if action == 'skip':
+                            skipped += 1
+                            continue
+                        if action == 'overwrite':
+                            old = existing_files[f.name]
+                            mime_type, _ = mimetypes.guess_type(f.name)
+                            replace_stored_file(
+                                old, f, size=f.size,
+                                mime_type=mime_type or 'application/octet-stream',
+                            )
+                            overwritten += 1
+                            continue
+                        if action == 'rename':
+                            base, ext = os.path.splitext(f.name)
+                            counter = 1
+                            new_name = f'{base} ({counter}){ext}'
+                            while BucketFile.objects.filter(bucket=bucket, folder_path=folder_path, name=new_name).exists():
+                                counter += 1
+                                new_name = f'{base} ({counter}){ext}'
+                            f.name = new_name
 
-            mime_type, _ = mimetypes.guess_type(f.name)
-            try:
-                BucketFile.objects.create(
-                    bucket=bucket, name=f.name, file=f,
-                    size=f.size, mime_type=mime_type or 'application/octet-stream',
-                    folder_path=folder_path,
-                )
-                created += 1
-            except Exception:
-                skipped += 1
+                    mime_type, _ = mimetypes.guess_type(f.name)
+                    BucketFile.objects.create(
+                        bucket=bucket, name=f.name, file=f,
+                        size=f.size, mime_type=mime_type or 'application/octet-stream',
+                        folder_path=folder_path,
+                    )
+                    created += 1
+        except QuotaExceeded:
+            return JsonResponse({'error': '存储空间不足'}, status=413)
 
         msg_parts = [f'上传 {created} 个']
         if overwritten:
@@ -288,9 +332,11 @@ def bucket_image_upload(request, pk):
     if not image.content_type or not image.content_type.startswith('image/'):
         return JsonResponse({'error': '仅支持图片文件'}, status=400)
 
-    folder_path = request.POST.get('folder_path', '').strip()
-    if folder_path and not folder_path.endswith('/'):
-        folder_path += '/'
+    try:
+        folder_path = normalize_bucket_path(request.POST.get('folder_path'))
+        validate_path_component(image.name, '文件名')
+    except ValueError as exc:
+        return JsonResponse({'error': str(exc)}, status=400)
 
     # 处理同名冲突：自动重命名
     original_name = image.name
@@ -300,11 +346,16 @@ def bucket_image_upload(request, pk):
         image.name = f'{base}_{uuid.uuid4().hex[:6]}{ext}'
 
     mime_type, _ = mimetypes.guess_type(image.name)
-    bf = BucketFile.objects.create(
-        bucket=bucket, name=image.name, file=image,
-        size=image.size, mime_type=mime_type or 'application/octet-stream',
-        folder_path=folder_path,
-    )
+    try:
+        with transaction.atomic():
+            ensure_quota(request.user, image.size)
+            bf = BucketFile.objects.create(
+                bucket=bucket, name=image.name, file=image,
+                size=image.size, mime_type=mime_type or 'application/octet-stream',
+                folder_path=folder_path,
+            )
+    except QuotaExceeded:
+        return JsonResponse({'error': '存储空间不足'}, status=413)
 
     # 生成不带 token 的 URL（编辑页面已登录，无需 token）
     file_path = (folder_path + image.name).strip('/')
@@ -334,7 +385,6 @@ def bucket_file_delete(request, pk, file_id):
 
     if request.method == 'POST':
         name = file_obj.name
-        file_obj.file.delete(save=False)
         file_obj.delete()
         messages.success(request, f'文件 "{name}" 已删除')
         return redirect('bucket_detail', pk=pk)
@@ -349,9 +399,10 @@ def bucket_file_rename(request, pk, file_id):
     file_obj = get_object_or_404(BucketFile, pk=file_id, bucket=bucket)
 
     if request.method == 'POST':
-        new_name = request.POST.get('name', '').strip()
-        if not new_name:
-            return HttpResponse('文件名不能为空', status=400)
+        try:
+            new_name = validate_path_component(request.POST.get('name'), '文件名')
+        except ValueError as exc:
+            return HttpResponse(str(exc), status=400)
         if BucketFile.objects.filter(bucket=bucket, folder_path=file_obj.folder_path,
                                      name=new_name).exclude(pk=file_obj.pk).exists():
             return HttpResponse(f'文件 "{new_name}" 已存在', status=409)
@@ -368,9 +419,13 @@ def bucket_folder_rename(request, pk):
     bucket = get_object_or_404(Bucket, pk=pk, owner=request.user)
 
     if request.method == 'POST':
-        old_path = request.POST.get('old_path', '').strip()
-        new_name = request.POST.get('new_name', '').strip()
-        parent_path = request.POST.get('parent_path', '').strip()
+        try:
+            old_path = normalize_bucket_path(request.POST.get('old_path'), allow_empty=False)
+            new_name = validate_path_component(request.POST.get('new_name'), '目录名')
+            parent_path = normalize_bucket_path(request.POST.get('parent_path'))
+        except ValueError as exc:
+            messages.error(request, str(exc))
+            return redirect('bucket_detail', pk=pk)
 
         if not old_path or not new_name:
             messages.error(request, '参数不完整')
@@ -411,27 +466,28 @@ def bucket_folder_download(request, pk):
     if not can_access:
         return HttpResponse('Forbidden', status=403)
 
-    path = request.GET.get('path', '').strip()
-    if path and not path.endswith('/'):
-        path += '/'
+    try:
+        path = normalize_bucket_path(request.GET.get('path'))
+    except ValueError as exc:
+        return HttpResponse(str(exc), status=400)
 
     files = BucketFile.objects.filter(bucket=bucket, folder_path__startswith=path).exclude(name='.keep')
     if not files:
         return HttpResponse('No files', status=404)
 
-    import io as _io, zipfile as _zipfile
-    buf = _io.BytesIO()
-    with _zipfile.ZipFile(buf, 'w', _zipfile.ZIP_DEFLATED) as zf:
-        plen = len(path)
-        for f in files:
-            arcname = f.folder_path[plen:] + f.name if f.folder_path.startswith(path) else f.name
-            zf.write(f.file.path, arcname)
-
-    buf.seek(0)
+    plen = len(path)
     folder_name = path.rstrip('/').split('/')[-1] if path.rstrip('/') else bucket.name
-    resp = HttpResponse(buf, content_type='application/zip')
-    resp['Content-Disposition'] = f'attachment; filename="{folder_name}.zip"'
-    return resp
+    try:
+        entries = [
+            (
+                f.file.path,
+                f.folder_path[plen:] + validate_path_component(f.name, '文件名'),
+            )
+            for f in files
+        ]
+        return zip_file_response(entries, folder_name)
+    except ValueError as exc:
+        return HttpResponse(str(exc), status=400)
 
 
 # ── API Key Management ──
@@ -553,8 +609,8 @@ def bucket_file_preview(request, pk, file_id):
         try:
             with open(file_obj.file.path, 'r', encoding='utf-8') as f:
                 ctx['content'] = f.read(50000)
-        except Exception as e:
-            ctx['content'] = f'[读取错误: {type(e).__name__} — {e}]'
+        except (OSError, UnicodeError):
+            ctx['content'] = '[读取错误: 无法读取文件]'
     elif file_obj.mime_type == 'application/pdf':
         ctx['preview_type'] = 'pdf'
     else:
@@ -577,10 +633,14 @@ def bucket_file_edit(request, pk, file_id):
 
     if request.method == 'POST':
         new_content = request.POST.get('content', '')
-        with open(file_obj.file.path, 'w', encoding='utf-8', newline='') as f:
-            f.write(new_content)
-        file_obj.size = len(new_content.encode('utf-8'))
-        file_obj.save(update_fields=['size'])
+        new_size = len(new_content.encode('utf-8'))
+        try:
+            with transaction.atomic():
+                ensure_quota(request.user, new_size - file_obj.size)
+                replace_text_content(file_obj, new_content)
+        except QuotaExceeded:
+            messages.error(request, '存储空间不足')
+            return redirect('bucket_file_edit', pk=bucket.id, file_id=file_obj.id)
         messages.success(request, f'"{file_obj.name}" 已保存')
         redirect_url = reverse('bucket_detail', kwargs={'pk': bucket.id})
         if file_obj.folder_path:
@@ -590,7 +650,7 @@ def bucket_file_edit(request, pk, file_id):
     try:
         with open(file_obj.file.path, 'r', encoding='utf-8') as f:
             content = f.read()
-    except Exception:
+    except (OSError, UnicodeError):
         content = ''
 
     return render(request, 'buckets/markdown_edit.html', {

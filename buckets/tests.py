@@ -1,6 +1,10 @@
+import io
+import os
+import tempfile
+import zipfile
 from uuid import uuid4
 
-from django.test import TestCase, Client
+from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
@@ -47,6 +51,16 @@ class BucketModelTests(TestCase):
             mime_type='text/plain'
         )
         self.assertEqual(b.total_size, 10)
+
+    def test_bucket_statistics_exclude_folder_placeholders(self):
+        b = Bucket.objects.create(name='folders', owner=self.user)
+        BucketFile.objects.create(
+            bucket=b, name='.keep', folder_path='empty/',
+            file=SimpleUploadedFile('.keep', b'.'), size=1,
+            mime_type='application/x-directory',
+        )
+        self.assertEqual(b.file_count, 0)
+        self.assertEqual(b.total_size, 0)
 
 
 class BucketFileModelTests(TestCase):
@@ -282,6 +296,98 @@ class BucketFileViewTests(TestCase):
         self.assertRedirects(resp, reverse('bucket_detail', args=[self.bucket.id]))
 
 
+class BucketFolderDownloadTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user('foldertest', password='testpass123')
+        self.other = User.objects.create_user('other-foldertest', password='testpass123')
+        self.client.login(username='foldertest', password='testpass123')
+        self.bucket = Bucket.objects.create(name='archive-bucket', owner=self.user)
+
+    def _create_file(self, name, folder_path, content=b'data'):
+        return BucketFile.objects.create(
+            bucket=self.bucket, name=name, folder_path=folder_path,
+            file=SimpleUploadedFile(name, content), size=len(content),
+            mime_type='text/plain',
+        )
+
+    def test_download_uses_current_directory_name(self):
+        self._create_file('report.txt', 'parent/current/')
+
+        resp = self.client.get(
+            reverse('bucket_folder_download', args=[self.bucket.id]),
+            {'path': 'parent/current/'},
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('filename="current.zip"', resp['Content-Disposition'])
+        self.assertNotIn('parent.zip', resp['Content-Disposition'])
+
+    def test_download_uses_paths_relative_to_current_directory(self):
+        self._create_file('root.txt', 'parent/current/', b'root')
+        self._create_file('nested.txt', 'parent/current/child/', b'nested')
+
+        resp = self.client.get(
+            reverse('bucket_folder_download', args=[self.bucket.id]),
+            {'path': 'parent/current/'},
+        )
+        with zipfile.ZipFile(io.BytesIO(b''.join(resp.streaming_content))) as zf:
+            names = zf.namelist()
+
+        self.assertCountEqual(names, ['root.txt', 'child/nested.txt'])
+        self.assertNotIn('current/root.txt', names)
+
+    def test_root_download_uses_bucket_name_and_preserves_paths(self):
+        self._create_file('root.txt', '', b'root')
+        self._create_file('nested.txt', 'docs/', b'nested')
+
+        resp = self.client.get(reverse('bucket_folder_download', args=[self.bucket.id]))
+        with zipfile.ZipFile(io.BytesIO(b''.join(resp.streaming_content))) as zf:
+            names = zf.namelist()
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('filename="archive-bucket.zip"', resp['Content-Disposition'])
+        self.assertCountEqual(names, ['root.txt', 'docs/nested.txt'])
+
+    def test_public_directory_download_allows_anonymous_access(self):
+        self.bucket.is_public = True
+        self.bucket.save(update_fields=['is_public'])
+        self._create_file('public.txt', 'docs/')
+        self.client.logout()
+
+        resp = self.client.get(
+            reverse('bucket_folder_download', args=[self.bucket.id]),
+            {'path': 'docs/'},
+        )
+
+        self.assertEqual(resp.status_code, 200)
+
+    def test_private_directory_download_rejects_other_user(self):
+        self._create_file('private.txt', 'docs/')
+        self.client.login(username='other-foldertest', password='testpass123')
+
+        resp = self.client.get(
+            reverse('bucket_folder_download', args=[self.bucket.id]),
+            {'path': 'docs/'},
+        )
+
+        self.assertEqual(resp.status_code, 403)
+
+    def test_empty_directory_download_returns_404(self):
+        BucketFile.objects.create(
+            bucket=self.bucket, name='.keep', folder_path='empty/',
+            file=SimpleUploadedFile('.keep', b'.'), size=1,
+            mime_type='application/x-directory',
+        )
+
+        resp = self.client.get(
+            reverse('bucket_folder_download', args=[self.bucket.id]),
+            {'path': 'empty/'},
+        )
+
+        self.assertEqual(resp.status_code, 404)
+
+
 class StorageQuotaTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('quotatest', password='testpass123')
@@ -322,6 +428,45 @@ class StorageQuotaTests(TestCase):
         self.user.refresh_from_db()
         self.assertEqual(self.user.storage_used, 300)
 
+    def test_placeholder_does_not_consume_quota(self):
+        BucketFile.objects.create(
+            bucket=self.bucket, name='.keep', folder_path='empty/',
+            file=SimpleUploadedFile('.keep', b'.'), size=1,
+            mime_type='application/x-directory',
+        )
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.storage_used, 0)
+
+    def test_bucket_upload_over_quota_is_rejected(self):
+        self.user.storage_quota = 3
+        self.user.save(update_fields=['storage_quota'])
+        self.client.login(username='quotatest', password='testpass123')
+
+        resp = self.client.post(
+            reverse('bucket_file_upload', args=[self.bucket.id]),
+            {'files': [SimpleUploadedFile('large.bin', b'1234')]},
+        )
+
+        self.assertEqual(resp.status_code, 413)
+        self.assertFalse(BucketFile.objects.filter(bucket=self.bucket, name='large.bin').exists())
+
+    def test_bucket_markdown_edit_updates_storage_delta(self):
+        self.client.login(username='quotatest', password='testpass123')
+        bucket_file = BucketFile.objects.create(
+            bucket=self.bucket, name='README.md',
+            file=SimpleUploadedFile('README.md', b'old'), size=3,
+            mime_type='text/markdown',
+        )
+
+        resp = self.client.post(
+            reverse('bucket_file_edit', args=[self.bucket.id, bucket_file.id]),
+            {'content': 'new content'},
+        )
+
+        self.assertEqual(resp.status_code, 302)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.storage_used, 11)
+
 
 class ApiKeyViewTests(TestCase):
     def setUp(self):
@@ -333,6 +478,37 @@ class ApiKeyViewTests(TestCase):
     def test_api_key_list(self):
         resp = self.client.get(reverse('api_key_list'))
         self.assertEqual(resp.status_code, 200)
+
+    def test_api_docs_requires_login(self):
+        self.client.logout()
+
+        resp = self.client.get(reverse('api_docs'))
+
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('/accounts/login/', resp.url)
+
+    def test_api_docs_lists_all_bucket_operations(self):
+        resp = self.client.get(reverse('api_docs'))
+
+        self.assertEqual(resp.status_code, 200)
+        expected_operations = [
+            '列出桶', '创建桶', '删除桶', '列出桶内文件', '上传文件',
+            '下载桶文件', '删除桶文件', '创建目录', '删除目录',
+        ]
+        for operation in expected_operations:
+            self.assertContains(resp, operation)
+        self.assertContains(resp, '/buckets/api/buckets/&lt;bucket_id&gt;/files/')
+        self.assertContains(resp, '/buckets/api/&lt;bucket_id&gt;/files/&lt;file_id&gt;/download/')
+
+    def test_api_docs_contains_common_language_examples(self):
+        resp = self.client.get(reverse('api_docs'))
+
+        for language in [
+            'cURL', 'JavaScript / TypeScript', 'Python', 'Go',
+            'PHP', 'Java 11+', 'C# / .NET', 'Ruby',
+        ]:
+            self.assertContains(resp, language)
+        self.assertContains(resp, 'X-Api-Key: djd_YOUR_API_KEY')
 
     def test_api_key_create(self):
         resp = self.client.post(reverse('api_key_create'), {'name': 'my-key'})
@@ -387,3 +563,107 @@ class ApiKeyViewTests(TestCase):
             reverse('api_bucket_file_download', args=[self.bucket.id, bf.id])
         )
         self.assertEqual(resp.status_code, 401)
+
+
+class BucketApiTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user('bucket-api-user', password='testpass123')
+        self.bucket = Bucket.objects.create(name='api', owner=self.user)
+        self.raw_key, key_hash, prefix = ApiKey.generate_key()
+        ApiKey.objects.create(
+            user=self.user, name='bucket-api', key_hash=key_hash, prefix=prefix,
+        )
+
+    def test_api_upload_updates_usage(self):
+        resp = self.client.post(
+            reverse('api_bucket_file_upload', args=[self.bucket.id]),
+            {'files': [SimpleUploadedFile('api.txt', b'12345')]},
+            HTTP_X_API_KEY=self.raw_key,
+        )
+
+        self.assertEqual(resp.status_code, 201)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.storage_used, 5)
+
+    def test_api_upload_over_quota_is_atomic(self):
+        self.user.storage_quota = 5
+        self.user.save(update_fields=['storage_quota'])
+
+        resp = self.client.post(
+            reverse('api_bucket_file_upload', args=[self.bucket.id]),
+            {
+                'files': [
+                    SimpleUploadedFile('a.txt', b'123'),
+                    SimpleUploadedFile('b.txt', b'456'),
+                ],
+            },
+            HTTP_X_API_KEY=self.raw_key,
+        )
+
+        self.assertEqual(resp.status_code, 413)
+        self.assertEqual(BucketFile.objects.filter(bucket=self.bucket).count(), 0)
+
+    def test_api_upload_conflict_creates_nothing(self):
+        BucketFile.objects.create(
+            bucket=self.bucket, name='exists.txt',
+            file=SimpleUploadedFile('exists.txt', b'old'), size=3,
+            mime_type='text/plain',
+        )
+
+        resp = self.client.post(
+            reverse('api_bucket_file_upload', args=[self.bucket.id]),
+            {
+                'files': [
+                    SimpleUploadedFile('new.txt', b'new'),
+                    SimpleUploadedFile('exists.txt', b'replacement'),
+                ],
+            },
+            HTTP_X_API_KEY=self.raw_key,
+        )
+
+        self.assertEqual(resp.status_code, 409)
+        self.assertFalse(BucketFile.objects.filter(bucket=self.bucket, name='new.txt').exists())
+
+    def test_api_rejects_unsafe_folder_paths(self):
+        resp = self.client.post(
+            reverse('api_bucket_file_upload', args=[self.bucket.id]),
+            {
+                'folder_path': '../escape/',
+                'files': [SimpleUploadedFile('safe.txt', b'x')],
+            },
+            HTTP_X_API_KEY=self.raw_key,
+        )
+        self.assertEqual(resp.status_code, 400)
+
+        resp = self.client.post(
+            reverse('api_bucket_folder_create', args=[self.bucket.id]),
+            data='{"name": "../escape"}', content_type='application/json',
+            HTTP_X_API_KEY=self.raw_key,
+        )
+        self.assertEqual(resp.status_code, 400)
+
+
+class BucketPhysicalFileLifecycleTests(TestCase):
+    def setUp(self):
+        self.media_dir = tempfile.TemporaryDirectory()
+        self.override = override_settings(MEDIA_ROOT=self.media_dir.name)
+        self.override.enable()
+        self.addCleanup(self.override.disable)
+        self.addCleanup(self.media_dir.cleanup)
+        self.user = User.objects.create_user('bucket-lifecycle', password='testpass123')
+
+    def test_bucket_cascade_removes_physical_files_after_commit(self):
+        bucket = Bucket.objects.create(name='delete', owner=self.user)
+        bucket_file = BucketFile.objects.create(
+            bucket=bucket, name='delete.txt',
+            file=SimpleUploadedFile('delete.txt', b'delete'), size=6,
+            mime_type='text/plain',
+        )
+        path = bucket_file.file.path
+        self.assertTrue(os.path.exists(path))
+
+        with self.captureOnCommitCallbacks(execute=True):
+            bucket.delete()
+
+        self.assertFalse(os.path.exists(path))

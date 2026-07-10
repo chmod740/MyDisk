@@ -239,7 +239,7 @@
         html = html.replace(/<pre><code class="language-mermaid">([\s\S]*?)<\/code><\/pre>/g,
             '<pre class="mermaid">$1</pre>');
 
-        preview.innerHTML = html;
+        window.setSanitizedMarkdownHtml(preview, html);
 
         // Render mermaid (debounced separately since it's heavy)
         if (preview.querySelector('.mermaid')) {

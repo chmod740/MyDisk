@@ -2,132 +2,813 @@
 {% block title %}API 使用文档{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto">
-    <h1 class="text-2xl font-bold dark:text-white mb-2">API 使用文档</h1>
-    <p class="text-gray-500 dark:text-gray-400 mb-6">所有 API 通过 <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">X-Api-Key</code> Header 认证</p>
-
-    <!-- 认证 -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
-        <h2 class="text-lg font-semibold dark:text-white mb-3">认证方式</h2>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">在所有请求中添加 Header：</p>
-        <code class="block bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded text-sm font-mono text-gray-800 dark:text-gray-200">X-Api-Key: djd_YOUR_API_KEY_HERE</code>
+<div class="max-w-6xl mx-auto space-y-8">
+    <div>
+        <h1 class="text-2xl font-bold dark:text-white mb-2">API 使用文档</h1>
+        <p class="text-gray-500 dark:text-gray-400">所有接口通过 <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">X-Api-Key</code> Header 认证。</p>
     </div>
 
-    <!-- 桶 API -->
-    <h2 class="text-xl font-bold dark:text-white mb-3 mt-8">📦 存储桶 API</h2>
-
-    <div class="space-y-4">
-        {% with base_url=base_url|add:'' %}
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2 flex items-center justify-between">
-                <span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">GET {{ base_url }}/buckets/api/buckets/</span>
-                <span class="text-xs text-gray-500 dark:text-gray-400">列出所有桶</span>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <h2 class="text-lg font-semibold dark:text-white mb-3">认证与占位符</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div>
+                <p class="text-gray-600 dark:text-gray-400 mb-2">认证 Header</p>
+                <pre class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto"><code>X-Api-Key: djd_YOUR_API_KEY</code></pre>
             </div>
-            <div class="p-4 text-sm text-gray-600 dark:text-gray-400">返回用户的所有存储桶列表（JSON）。</div>
-        </div>
-
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2 flex items-center justify-between">
-                <span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">POST {{ base_url }}/buckets/api/buckets/create/</span>
-                <span class="text-xs text-gray-500 dark:text-gray-400">创建桶</span>
-            </div>
-            <div class="p-4 text-sm text-gray-600 dark:text-gray-400">Body (JSON): <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">{"name": "my-bucket", "is_public": false}</code></div>
-        </div>
-
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2 flex items-center justify-between">
-                <span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">DELETE {{ base_url }}/buckets/api/buckets/&lt;id&gt;/</span>
-                <span class="text-xs text-gray-500 dark:text-gray-400">删除桶</span>
-            </div>
-            <div class="p-4 text-sm text-gray-600 dark:text-gray-400">删除整个桶及其所有文件（不可恢复）。</div>
-        </div>
-
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2 flex items-center justify-between">
-                <span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">GET {{ base_url }}/buckets/api/buckets/&lt;id&gt;/files/</span>
-                <span class="text-xs text-gray-500 dark:text-gray-400">列出桶内文件</span>
-            </div>
-            <div class="p-4 text-sm text-gray-600 dark:text-gray-400">可选 <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">?path=dir1/</code> 浏览子目录。</div>
-        </div>
-
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2 flex items-center justify-between">
-                <span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">POST {{ base_url }}/buckets/api/buckets/&lt;id&gt;/upload/</span>
-                <span class="text-xs text-gray-500 dark:text-gray-400">上传文件</span>
-            </div>
-            <div class="p-4 text-sm text-gray-600 dark:text-gray-400">multipart/form-data: <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">files</code> (多文件), <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">folder_path</code> (可选)</div>
-        </div>
-
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2 flex items-center justify-between">
-                <span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">DELETE {{ base_url }}/buckets/api/buckets/&lt;id&gt;/files/&lt;fid&gt;/</span>
-                <span class="text-xs text-gray-500 dark:text-gray-400">删除文件</span>
+            <div>
+                <p class="text-gray-600 dark:text-gray-400 mb-2">示例变量</p>
+                <pre class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto"><code>BASE_URL={{ base_url }}
+BUCKET_ID=&lt;bucket_id&gt;
+FILE_ID=&lt;file_id&gt;</code></pre>
             </div>
         </div>
-
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2 flex items-center justify-between">
-                <span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">POST {{ base_url }}/buckets/api/buckets/&lt;id&gt;/folder/create/</span>
-                <span class="text-xs text-gray-500 dark:text-gray-400">创建目录</span>
-            </div>
-            <div class="p-4 text-sm text-gray-600 dark:text-gray-400">Body (JSON): <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">{"name": "photos", "parent_path": ""}</code></div>
-        </div>
-
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2 flex items-center justify-between">
-                <span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">DELETE {{ base_url }}/buckets/api/buckets/&lt;id&gt;/folder/?path=dir1/</span>
-                <span class="text-xs text-gray-500 dark:text-gray-400">删除目录</span>
-            </div>
-        </div>
-        {% endwith %}
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-3">创建 API Key 后只会展示一次完整密钥，请及时保存。示例中的 <code>djd_YOUR_API_KEY</code> 需要替换为真实密钥。</p>
     </div>
 
-    <!-- 文件 API -->
-    <h2 class="text-xl font-bold dark:text-white mb-3 mt-8">📂 文件管理 API</h2>
-    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">操作"我的文件"中的文件和文件夹。</p>
-
-    <div class="space-y-4">
-        {% with base_url=base_url|add:'' %}
+    <div>
+        <h2 class="text-xl font-bold dark:text-white mb-3">存储桶接口速查</h2>
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2"><span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">GET {{ base_url }}/files/api/list/</span></div>
-            <div class="p-4 text-sm text-gray-600 dark:text-gray-400">列出文件和文件夹。可选 <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">?folder=&lt;id&gt;</code></div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                        <tr>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">操作</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Method</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Endpoint</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">请求数据</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                        <tr>
+                            <td class="px-4 py-3 dark:text-gray-200">列出桶</td>
+                            <td class="px-4 py-3 font-mono text-blue-600 dark:text-blue-400">GET</td>
+                            <td class="px-4 py-3 font-mono dark:text-gray-200">{{ base_url }}/buckets/api/buckets/</td>
+                            <td class="px-4 py-3 text-gray-500 dark:text-gray-400">无</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 dark:text-gray-200">创建桶</td>
+                            <td class="px-4 py-3 font-mono text-green-600 dark:text-green-400">POST</td>
+                            <td class="px-4 py-3 font-mono dark:text-gray-200">{{ base_url }}/buckets/api/buckets/create/</td>
+                            <td class="px-4 py-3 font-mono text-gray-500 dark:text-gray-400">{"name":"photos","is_public":false}</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 dark:text-gray-200">删除桶</td>
+                            <td class="px-4 py-3 font-mono text-red-600 dark:text-red-400">DELETE</td>
+                            <td class="px-4 py-3 font-mono dark:text-gray-200">{{ base_url }}/buckets/api/buckets/&lt;bucket_id&gt;/</td>
+                            <td class="px-4 py-3 text-gray-500 dark:text-gray-400">无，删除后不可恢复</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 dark:text-gray-200">列出桶内文件</td>
+                            <td class="px-4 py-3 font-mono text-blue-600 dark:text-blue-400">GET</td>
+                            <td class="px-4 py-3 font-mono dark:text-gray-200">{{ base_url }}/buckets/api/buckets/&lt;bucket_id&gt;/files/?path=docs/</td>
+                            <td class="px-4 py-3 text-gray-500 dark:text-gray-400">path 可选，目录以 / 结尾</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 dark:text-gray-200">上传文件</td>
+                            <td class="px-4 py-3 font-mono text-green-600 dark:text-green-400">POST</td>
+                            <td class="px-4 py-3 font-mono dark:text-gray-200">{{ base_url }}/buckets/api/buckets/&lt;bucket_id&gt;/upload/</td>
+                            <td class="px-4 py-3 text-gray-500 dark:text-gray-400">multipart: files 一个或多个，folder_path 可选</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 dark:text-gray-200">下载桶文件</td>
+                            <td class="px-4 py-3 font-mono text-blue-600 dark:text-blue-400">GET</td>
+                            <td class="px-4 py-3 font-mono dark:text-gray-200">{{ base_url }}/buckets/api/&lt;bucket_id&gt;/files/&lt;file_id&gt;/download/</td>
+                            <td class="px-4 py-3 text-gray-500 dark:text-gray-400">返回文件流</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 dark:text-gray-200">删除桶文件</td>
+                            <td class="px-4 py-3 font-mono text-red-600 dark:text-red-400">DELETE</td>
+                            <td class="px-4 py-3 font-mono dark:text-gray-200">{{ base_url }}/buckets/api/buckets/&lt;bucket_id&gt;/files/&lt;file_id&gt;/</td>
+                            <td class="px-4 py-3 text-gray-500 dark:text-gray-400">无</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 dark:text-gray-200">创建目录</td>
+                            <td class="px-4 py-3 font-mono text-green-600 dark:text-green-400">POST</td>
+                            <td class="px-4 py-3 font-mono dark:text-gray-200">{{ base_url }}/buckets/api/buckets/&lt;bucket_id&gt;/folder/create/</td>
+                            <td class="px-4 py-3 font-mono text-gray-500 dark:text-gray-400">{"name":"docs","parent_path":""}</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 dark:text-gray-200">删除目录</td>
+                            <td class="px-4 py-3 font-mono text-red-600 dark:text-red-400">DELETE</td>
+                            <td class="px-4 py-3 font-mono dark:text-gray-200">{{ base_url }}/buckets/api/buckets/&lt;bucket_id&gt;/folder/?path=docs/</td>
+                            <td class="px-4 py-3 text-gray-500 dark:text-gray-400">删除目录下所有文件</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2"><span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">POST {{ base_url }}/files/api/upload/</span></div>
-            <div class="p-4 text-sm text-gray-600 dark:text-gray-400">multipart/form-data: <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">files</code>, <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">folder</code> (可选)</div>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2"><span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">GET {{ base_url }}/files/api/&lt;id&gt;/download/</span></div>
-            <div class="p-4 text-sm text-gray-600 dark:text-gray-400">下载文件（FileResponse）。</div>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2"><span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">DELETE {{ base_url }}/files/api/&lt;id&gt;/delete/</span></div>
-            <div class="p-4 text-sm text-gray-600 dark:text-gray-400">软删除文件（移至回收站）。</div>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2"><span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">POST {{ base_url }}/files/api/folder/create/</span></div>
-            <div class="p-4 text-sm text-gray-600 dark:text-gray-400">Body (JSON): <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded">{"name": "docs", "parent": "&lt;id&gt;"}</code></div>
-        </div>
-        {% endwith %}
     </div>
 
-    <!-- curl 示例 -->
-    <h2 class="text-xl font-bold dark:text-white mb-3 mt-8">curl 快速测试</h2>
-    <div class="bg-gray-900 rounded-xl p-4 overflow-x-auto text-sm font-mono">
-        <pre class="text-green-400"># 列出桶
-curl -H "X-Api-Key: djd_YOUR_KEY" {{ base_url }}/buckets/api/buckets/
+    <div>
+        <h2 class="text-xl font-bold dark:text-white mb-3">响应示例</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                <h3 class="font-semibold dark:text-white mb-2">列出桶</h3>
+                <pre class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-sm"><code>{
+  "buckets": [
+    {
+      "id": "6c0c...",
+      "name": "photos",
+      "is_public": false,
+      "file_count": 12,
+      "total_size": 204800,
+      "created_at": "2026-05-24T10:00:00+08:00"
+    }
+  ]
+}</code></pre>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                <h3 class="font-semibold dark:text-white mb-2">列出文件</h3>
+                <pre class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-sm"><code>{
+  "bucket": {"id": "6c0c...", "name": "photos"},
+  "current_path": "docs/",
+  "subfolders": ["archive"],
+  "files": [
+    {
+      "id": "8e2b...",
+      "name": "readme.md",
+      "size": 1024,
+      "mime_type": "text/markdown",
+      "folder_path": "docs/"
+    }
+  ]
+}</code></pre>
+            </div>
+        </div>
+    </div>
+
+    <div>
+        <h2 class="text-xl font-bold dark:text-white mb-3">多语言常用操作样例</h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">每种语言都包含：列出桶、创建桶、删除桶、列出文件、上传文件、下载文件、创建目录、删除文件、删除目录。</p>
+
+        <div class="space-y-6">
+            <section class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="font-semibold dark:text-white">cURL</h3>
+                </div>
+                <pre class="bg-gray-900 text-green-400 p-4 overflow-x-auto text-sm"><code>BASE_URL="{{ base_url }}"
+API_KEY="djd_YOUR_API_KEY"
+BUCKET_ID="&lt;bucket_id&gt;"
+FILE_ID="&lt;file_id&gt;"
+
+# 列出桶
+curl -H "X-Api-Key: $API_KEY" "$BASE_URL/buckets/api/buckets/"
 
 # 创建桶
-curl -X POST -H "X-Api-Key: djd_YOUR_KEY" -H "Content-Type: application/json" \
-  -d '{"name":"test","is_public":false}' {{ base_url }}/buckets/api/buckets/create/
+curl -X POST "$BASE_URL/buckets/api/buckets/create/" \
+  -H "X-Api-Key: $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"photos","is_public":false}'
+
+# 删除桶
+curl -X DELETE -H "X-Api-Key: $API_KEY" \
+  "$BASE_URL/buckets/api/buckets/$BUCKET_ID/"
+
+# 列出文件
+curl -H "X-Api-Key: $API_KEY" \
+  "$BASE_URL/buckets/api/buckets/$BUCKET_ID/files/?path=docs/"
 
 # 上传文件
-curl -X POST -H "X-Api-Key: djd_YOUR_KEY" \
-  -F "files=@hello.txt" -F "folder_path=" {{ base_url }}/buckets/api/buckets/&lt;id&gt;/upload/
+curl -X POST "$BASE_URL/buckets/api/buckets/$BUCKET_ID/upload/" \
+  -H "X-Api-Key: $API_KEY" \
+  -F "files=@./readme.md" \
+  -F "folder_path=docs/"
 
 # 下载文件
-curl -H "X-Api-Key: djd_YOUR_KEY" -o output.txt \
-  {{ base_url }}/files/api/&lt;id&gt;/download/</pre>
+curl -H "X-Api-Key: $API_KEY" -o readme.md \
+  "$BASE_URL/buckets/api/$BUCKET_ID/files/$FILE_ID/download/"
+
+# 创建目录
+curl -X POST "$BASE_URL/buckets/api/buckets/$BUCKET_ID/folder/create/" \
+  -H "X-Api-Key: $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"docs","parent_path":""}'
+
+# 删除文件
+curl -X DELETE -H "X-Api-Key: $API_KEY" \
+  "$BASE_URL/buckets/api/buckets/$BUCKET_ID/files/$FILE_ID/"
+
+# 删除目录
+curl -X DELETE -H "X-Api-Key: $API_KEY" \
+  "$BASE_URL/buckets/api/buckets/$BUCKET_ID/folder/?path=docs/"</code></pre>
+            </section>
+
+            <section class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="font-semibold dark:text-white">JavaScript / TypeScript</h3>
+                </div>
+                <pre class="bg-gray-900 text-green-400 p-4 overflow-x-auto text-sm"><code>const BASE_URL = "{{ base_url }}";
+const API_KEY = "djd_YOUR_API_KEY";
+const BUCKET_ID = "&lt;bucket_id&gt;";
+const FILE_ID = "&lt;file_id&gt;";
+
+const headers = { "X-Api-Key": API_KEY };
+const jsonHeaders = { ...headers, "Content-Type": "application/json" };
+
+async function listBuckets() {
+  const res = await fetch(`${BASE_URL}/buckets/api/buckets/`, { headers });
+  return res.json();
+}
+
+async function createBucket() {
+  const res = await fetch(`${BASE_URL}/buckets/api/buckets/create/`, {
+    method: "POST",
+    headers: jsonHeaders,
+    body: JSON.stringify({ name: "photos", is_public: false })
+  });
+  return res.json();
+}
+
+async function deleteBucket() {
+  const res = await fetch(`${BASE_URL}/buckets/api/buckets/${BUCKET_ID}/`, {
+    method: "DELETE",
+    headers
+  });
+  return res.json();
+}
+
+async function listFiles(path = "docs/") {
+  const url = new URL(`${BASE_URL}/buckets/api/buckets/${BUCKET_ID}/files/`);
+  url.searchParams.set("path", path);
+  const res = await fetch(url, { headers });
+  return res.json();
+}
+
+async function uploadFile(file) {
+  const body = new FormData();
+  body.append("files", file);
+  body.append("folder_path", "docs/");
+  const res = await fetch(`${BASE_URL}/buckets/api/buckets/${BUCKET_ID}/upload/`, {
+    method: "POST",
+    headers,
+    body
+  });
+  return res.json();
+}
+
+async function downloadFile() {
+  const res = await fetch(`${BASE_URL}/buckets/api/${BUCKET_ID}/files/${FILE_ID}/download/`, { headers });
+  const blob = await res.blob();
+  return blob;
+}
+
+async function createFolder() {
+  const res = await fetch(`${BASE_URL}/buckets/api/buckets/${BUCKET_ID}/folder/create/`, {
+    method: "POST",
+    headers: jsonHeaders,
+    body: JSON.stringify({ name: "docs", parent_path: "" })
+  });
+  return res.json();
+}
+
+async function deleteFile() {
+  const res = await fetch(`${BASE_URL}/buckets/api/buckets/${BUCKET_ID}/files/${FILE_ID}/`, {
+    method: "DELETE",
+    headers
+  });
+  return res.json();
+}
+
+async function deleteFolder(path = "docs/") {
+  const url = new URL(`${BASE_URL}/buckets/api/buckets/${BUCKET_ID}/folder/`);
+  url.searchParams.set("path", path);
+  const res = await fetch(url, { method: "DELETE", headers });
+  return res.json();
+}</code></pre>
+            </section>
+
+            <section class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="font-semibold dark:text-white">Python</h3>
+                </div>
+                <pre class="bg-gray-900 text-green-400 p-4 overflow-x-auto text-sm"><code>import requests
+
+BASE_URL = "{{ base_url }}"
+API_KEY = "djd_YOUR_API_KEY"
+BUCKET_ID = "&lt;bucket_id&gt;"
+FILE_ID = "&lt;file_id&gt;"
+HEADERS = {"X-Api-Key": API_KEY}
+
+def list_buckets():
+    return requests.get(f"{BASE_URL}/buckets/api/buckets/", headers=HEADERS).json()
+
+def create_bucket():
+    payload = {"name": "photos", "is_public": False}
+    return requests.post(f"{BASE_URL}/buckets/api/buckets/create/", json=payload, headers=HEADERS).json()
+
+def delete_bucket():
+    return requests.delete(f"{BASE_URL}/buckets/api/buckets/{BUCKET_ID}/", headers=HEADERS).json()
+
+def list_files(path="docs/"):
+    return requests.get(
+        f"{BASE_URL}/buckets/api/buckets/{BUCKET_ID}/files/",
+        params={"path": path},
+        headers=HEADERS,
+    ).json()
+
+def upload_file():
+    with open("readme.md", "rb") as f:
+        files = [("files", ("readme.md", f, "text/markdown"))]
+        data = {"folder_path": "docs/"}
+        return requests.post(
+            f"{BASE_URL}/buckets/api/buckets/{BUCKET_ID}/upload/",
+            headers=HEADERS,
+            files=files,
+            data=data,
+        ).json()
+
+def download_file():
+    r = requests.get(f"{BASE_URL}/buckets/api/{BUCKET_ID}/files/{FILE_ID}/download/", headers=HEADERS)
+    r.raise_for_status()
+    open("readme.md", "wb").write(r.content)
+
+def create_folder():
+    payload = {"name": "docs", "parent_path": ""}
+    return requests.post(
+        f"{BASE_URL}/buckets/api/buckets/{BUCKET_ID}/folder/create/",
+        json=payload,
+        headers=HEADERS,
+    ).json()
+
+def delete_file():
+    return requests.delete(f"{BASE_URL}/buckets/api/buckets/{BUCKET_ID}/files/{FILE_ID}/", headers=HEADERS).json()
+
+def delete_folder(path="docs/"):
+    return requests.delete(
+        f"{BASE_URL}/buckets/api/buckets/{BUCKET_ID}/folder/",
+        params={"path": path},
+        headers=HEADERS,
+    ).json()</code></pre>
+            </section>
+
+            <section class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="font-semibold dark:text-white">Go</h3>
+                </div>
+                <pre class="bg-gray-900 text-green-400 p-4 overflow-x-auto text-sm"><code>package main
+
+import (
+	"bytes"
+	"io"
+	"mime/multipart"
+	"net/http"
+	"net/url"
+	"os"
+)
+
+const baseURL = "{{ base_url }}"
+const apiKey = "djd_YOUR_API_KEY"
+const bucketID = "&lt;bucket_id&gt;"
+const fileID = "&lt;file_id&gt;"
+
+func do(method, endpoint, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := http.NewRequest(method, baseURL+endpoint, body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("X-Api-Key", apiKey)
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
+	return http.DefaultClient.Do(req)
+}
+
+func listBuckets() (*http.Response, error) {
+	return do("GET", "/buckets/api/buckets/", "", nil)
+}
+
+func createBucket() (*http.Response, error) {
+	body := bytes.NewBufferString(`{"name":"photos","is_public":false}`)
+	return do("POST", "/buckets/api/buckets/create/", "application/json", body)
+}
+
+func deleteBucket() (*http.Response, error) {
+	return do("DELETE", "/buckets/api/buckets/"+bucketID+"/", "", nil)
+}
+
+func listFiles(path string) (*http.Response, error) {
+	q := url.Values{}
+	q.Set("path", path)
+	return do("GET", "/buckets/api/buckets/"+bucketID+"/files/?"+q.Encode(), "", nil)
+}
+
+func uploadFile() (*http.Response, error) {
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	writer.WriteField("folder_path", "docs/")
+	part, err := writer.CreateFormFile("files", "readme.md")
+	if err != nil {
+		return nil, err
+	}
+	file, err := os.Open("readme.md")
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	io.Copy(part, file)
+	writer.Close()
+	return do("POST", "/buckets/api/buckets/"+bucketID+"/upload/", writer.FormDataContentType(), &body)
+}
+
+func downloadFile() (*http.Response, error) {
+	return do("GET", "/buckets/api/"+bucketID+"/files/"+fileID+"/download/", "", nil)
+}
+
+func createFolder() (*http.Response, error) {
+	body := bytes.NewBufferString(`{"name":"docs","parent_path":""}`)
+	return do("POST", "/buckets/api/buckets/"+bucketID+"/folder/create/", "application/json", body)
+}
+
+func deleteFile() (*http.Response, error) {
+	return do("DELETE", "/buckets/api/buckets/"+bucketID+"/files/"+fileID+"/", "", nil)
+}
+
+func deleteFolder(path string) (*http.Response, error) {
+	q := url.Values{}
+	q.Set("path", path)
+	return do("DELETE", "/buckets/api/buckets/"+bucketID+"/folder/?"+q.Encode(), "", nil)
+}</code></pre>
+            </section>
+
+            <section class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="font-semibold dark:text-white">PHP</h3>
+                </div>
+                <pre class="bg-gray-900 text-green-400 p-4 overflow-x-auto text-sm"><code>&lt;?php
+$baseUrl = "{{ base_url }}";
+$apiKey = "djd_YOUR_API_KEY";
+$bucketId = "&lt;bucket_id&gt;";
+$fileId = "&lt;file_id&gt;";
+
+function request_api($method, $url, $body = null, $headers = []) {
+    global $apiKey;
+    $ch = curl_init($url);
+    $headers[] = "X-Api-Key: $apiKey";
+    curl_setopt_array($ch, [
+        CURLOPT_CUSTOMREQUEST =&gt; $method,
+        CURLOPT_RETURNTRANSFER =&gt; true,
+        CURLOPT_HTTPHEADER =&gt; $headers,
+    ]);
+    if ($body !== null) curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+    $res = curl_exec($ch);
+    curl_close($ch);
+    return $res;
+}
+
+function list_buckets() {
+    global $baseUrl;
+    return request_api("GET", "$baseUrl/buckets/api/buckets/");
+}
+
+function create_bucket() {
+    global $baseUrl;
+    $body = json_encode(["name" =&gt; "photos", "is_public" =&gt; false]);
+    return request_api("POST", "$baseUrl/buckets/api/buckets/create/", $body, ["Content-Type: application/json"]);
+}
+
+function delete_bucket() {
+    global $baseUrl, $bucketId;
+    return request_api("DELETE", "$baseUrl/buckets/api/buckets/$bucketId/");
+}
+
+function list_files($path = "docs/") {
+    global $baseUrl, $bucketId;
+    return request_api("GET", "$baseUrl/buckets/api/buckets/$bucketId/files/?path=" . urlencode($path));
+}
+
+function upload_file() {
+    global $baseUrl, $bucketId;
+    $body = [
+        "folder_path" =&gt; "docs/",
+        "files" =&gt; new CURLFile("readme.md", "text/markdown", "readme.md"),
+    ];
+    return request_api("POST", "$baseUrl/buckets/api/buckets/$bucketId/upload/", $body);
+}
+
+function download_file() {
+    global $baseUrl, $bucketId, $fileId;
+    $data = request_api("GET", "$baseUrl/buckets/api/$bucketId/files/$fileId/download/");
+    file_put_contents("readme.md", $data);
+}
+
+function create_folder() {
+    global $baseUrl, $bucketId;
+    $body = json_encode(["name" =&gt; "docs", "parent_path" =&gt; ""]);
+    return request_api("POST", "$baseUrl/buckets/api/buckets/$bucketId/folder/create/", $body, ["Content-Type: application/json"]);
+}
+
+function delete_file() {
+    global $baseUrl, $bucketId, $fileId;
+    return request_api("DELETE", "$baseUrl/buckets/api/buckets/$bucketId/files/$fileId/");
+}
+
+function delete_folder($path = "docs/") {
+    global $baseUrl, $bucketId;
+    return request_api("DELETE", "$baseUrl/buckets/api/buckets/$bucketId/folder/?path=" . urlencode($path));
+}
+?&gt;</code></pre>
+            </section>
+
+            <section class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="font-semibold dark:text-white">Java 11+</h3>
+                </div>
+                <pre class="bg-gray-900 text-green-400 p-4 overflow-x-auto text-sm"><code>import java.io.IOException;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+public class BucketApiExample {
+    static final String BASE_URL = "{{ base_url }}";
+    static final String API_KEY = "djd_YOUR_API_KEY";
+    static final String BUCKET_ID = "&lt;bucket_id&gt;";
+    static final String FILE_ID = "&lt;file_id&gt;";
+    static final HttpClient CLIENT = HttpClient.newHttpClient();
+
+    static HttpRequest.Builder request(String path) {
+        return HttpRequest.newBuilder(URI.create(BASE_URL + path))
+                .header("X-Api-Key", API_KEY);
+    }
+
+    static HttpResponse&lt;String&gt; send(HttpRequest request) throws Exception {
+        return CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+    }
+
+    static HttpResponse&lt;String&gt; listBuckets() throws Exception {
+        return send(request("/buckets/api/buckets/").GET().build());
+    }
+
+    static HttpResponse&lt;String&gt; createBucket() throws Exception {
+        String json = "{\"name\":\"photos\",\"is_public\":false}";
+        return send(request("/buckets/api/buckets/create/")
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(json))
+                .build());
+    }
+
+    static HttpResponse&lt;String&gt; deleteBucket() throws Exception {
+        return send(request("/buckets/api/buckets/" + BUCKET_ID + "/")
+                .DELETE()
+                .build());
+    }
+
+    static HttpResponse&lt;String&gt; listFiles(String path) throws Exception {
+        String q = URLEncoder.encode(path, StandardCharsets.UTF_8);
+        return send(request("/buckets/api/buckets/" + BUCKET_ID + "/files/?path=" + q).GET().build());
+    }
+
+    static HttpResponse&lt;String&gt; uploadFile() throws Exception {
+        String boundary = "----DjangoDiskBoundary";
+        byte[] fileBytes = Files.readAllBytes(Path.of("readme.md"));
+        String prefix = "--" + boundary + "\r\n"
+                + "Content-Disposition: form-data; name=\"folder_path\"\r\n\r\ndocs/\r\n"
+                + "--" + boundary + "\r\n"
+                + "Content-Disposition: form-data; name=\"files\"; filename=\"readme.md\"\r\n"
+                + "Content-Type: text/markdown\r\n\r\n";
+        String suffix = "\r\n--" + boundary + "--\r\n";
+        byte[] body = concat(prefix.getBytes(StandardCharsets.UTF_8), fileBytes, suffix.getBytes(StandardCharsets.UTF_8));
+
+        return send(request("/buckets/api/buckets/" + BUCKET_ID + "/upload/")
+                .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                .POST(HttpRequest.BodyPublishers.ofByteArray(body))
+                .build());
+    }
+
+    static HttpResponse&lt;byte[]&gt; downloadFile() throws Exception {
+        return CLIENT.send(
+                request("/buckets/api/" + BUCKET_ID + "/files/" + FILE_ID + "/download/").GET().build(),
+                HttpResponse.BodyHandlers.ofByteArray());
+    }
+
+    static HttpResponse&lt;String&gt; createFolder() throws Exception {
+        String json = "{\"name\":\"docs\",\"parent_path\":\"\"}";
+        return send(request("/buckets/api/buckets/" + BUCKET_ID + "/folder/create/")
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(json))
+                .build());
+    }
+
+    static HttpResponse&lt;String&gt; deleteFile() throws Exception {
+        return send(request("/buckets/api/buckets/" + BUCKET_ID + "/files/" + FILE_ID + "/").DELETE().build());
+    }
+
+    static HttpResponse&lt;String&gt; deleteFolder(String path) throws Exception {
+        String q = URLEncoder.encode(path, StandardCharsets.UTF_8);
+        return send(request("/buckets/api/buckets/" + BUCKET_ID + "/folder/?path=" + q).DELETE().build());
+    }
+
+    static byte[] concat(byte[]... arrays) throws IOException {
+        int len = 0;
+        for (byte[] a : arrays) len += a.length;
+        byte[] out = new byte[len];
+        int pos = 0;
+        for (byte[] a : arrays) {
+            System.arraycopy(a, 0, out, pos, a.length);
+            pos += a.length;
+        }
+        return out;
+    }
+}</code></pre>
+            </section>
+
+            <section class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="font-semibold dark:text-white">C# / .NET</h3>
+                </div>
+                <pre class="bg-gray-900 text-green-400 p-4 overflow-x-auto text-sm"><code>using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
+
+var baseUrl = "{{ base_url }}";
+var apiKey = "djd_YOUR_API_KEY";
+var bucketId = "&lt;bucket_id&gt;";
+var fileId = "&lt;file_id&gt;";
+
+using var client = new HttpClient();
+client.DefaultRequestHeaders.Add("X-Api-Key", apiKey);
+
+async Task&lt;string&gt; ListBuckets() {
+    return await client.GetStringAsync($"{baseUrl}/buckets/api/buckets/");
+}
+
+async Task&lt;string&gt; CreateBucket() {
+    var json = JsonSerializer.Serialize(new { name = "photos", is_public = false });
+    var res = await client.PostAsync($"{baseUrl}/buckets/api/buckets/create/",
+        new StringContent(json, Encoding.UTF8, "application/json"));
+    return await res.Content.ReadAsStringAsync();
+}
+
+async Task&lt;string&gt; DeleteBucket() {
+    var res = await client.DeleteAsync($"{baseUrl}/buckets/api/buckets/{bucketId}/");
+    return await res.Content.ReadAsStringAsync();
+}
+
+async Task&lt;string&gt; ListFiles(string path = "docs/") {
+    var url = $"{baseUrl}/buckets/api/buckets/{bucketId}/files/?path={Uri.EscapeDataString(path)}";
+    return await client.GetStringAsync(url);
+}
+
+async Task&lt;string&gt; UploadFile() {
+    using var form = new MultipartFormDataContent();
+    form.Add(new StringContent("docs/"), "folder_path");
+    var file = new StreamContent(File.OpenRead("readme.md"));
+    file.Headers.ContentType = new MediaTypeHeaderValue("text/markdown");
+    form.Add(file, "files", "readme.md");
+    var res = await client.PostAsync($"{baseUrl}/buckets/api/buckets/{bucketId}/upload/", form);
+    return await res.Content.ReadAsStringAsync();
+}
+
+async Task DownloadFile() {
+    var bytes = await client.GetByteArrayAsync($"{baseUrl}/buckets/api/{bucketId}/files/{fileId}/download/");
+    await File.WriteAllBytesAsync("readme.md", bytes);
+}
+
+async Task&lt;string&gt; CreateFolder() {
+    var json = JsonSerializer.Serialize(new { name = "docs", parent_path = "" });
+    var res = await client.PostAsync($"{baseUrl}/buckets/api/buckets/{bucketId}/folder/create/",
+        new StringContent(json, Encoding.UTF8, "application/json"));
+    return await res.Content.ReadAsStringAsync();
+}
+
+async Task&lt;string&gt; DeleteFile() {
+    var res = await client.DeleteAsync($"{baseUrl}/buckets/api/buckets/{bucketId}/files/{fileId}/");
+    return await res.Content.ReadAsStringAsync();
+}
+
+async Task&lt;string&gt; DeleteFolder(string path = "docs/") {
+    var url = $"{baseUrl}/buckets/api/buckets/{bucketId}/folder/?path={Uri.EscapeDataString(path)}";
+    var res = await client.DeleteAsync(url);
+    return await res.Content.ReadAsStringAsync();
+}</code></pre>
+            </section>
+
+            <section class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="font-semibold dark:text-white">Ruby</h3>
+                </div>
+                <pre class="bg-gray-900 text-green-400 p-4 overflow-x-auto text-sm"><code>require "net/http"
+require "json"
+require "uri"
+
+BASE_URL = "{{ base_url }}"
+API_KEY = "djd_YOUR_API_KEY"
+BUCKET_ID = "&lt;bucket_id&gt;"
+FILE_ID = "&lt;file_id&gt;"
+
+def request(method, path, body: nil, content_type: nil)
+  uri = URI(BASE_URL + path)
+  req = Object.const_get("Net::HTTP::#{method.capitalize}").new(uri)
+  req["X-Api-Key"] = API_KEY
+  req["Content-Type"] = content_type if content_type
+  req.body = body if body
+  Net::HTTP.start(uri.hostname, uri.port, use_ssl: uri.scheme == "https") { |http| http.request(req) }
+end
+
+def list_buckets
+  request("get", "/buckets/api/buckets/")
+end
+
+def create_bucket
+  body = { name: "photos", is_public: false }.to_json
+  request("post", "/buckets/api/buckets/create/", body: body, content_type: "application/json")
+end
+
+def delete_bucket
+  request("delete", "/buckets/api/buckets/#{BUCKET_ID}/")
+end
+
+def list_files(path = "docs/")
+  request("get", "/buckets/api/buckets/#{BUCKET_ID}/files/?path=#{URI.encode_www_form_component(path)}")
+end
+
+def upload_file
+  boundary = "RubyBoundary"
+  file = File.binread("readme.md")
+  body = "--#{boundary}\r\n" \
+         "Content-Disposition: form-data; name=\"folder_path\"\r\n\r\ndocs/\r\n" \
+         "--#{boundary}\r\n" \
+         "Content-Disposition: form-data; name=\"files\"; filename=\"readme.md\"\r\n" \
+         "Content-Type: text/markdown\r\n\r\n" \
+         "#{file}\r\n--#{boundary}--\r\n"
+  request("post", "/buckets/api/buckets/#{BUCKET_ID}/upload/",
+          body: body, content_type: "multipart/form-data; boundary=#{boundary}")
+end
+
+def download_file
+  res = request("get", "/buckets/api/#{BUCKET_ID}/files/#{FILE_ID}/download/")
+  File.binwrite("readme.md", res.body)
+end
+
+def create_folder
+  body = { name: "docs", parent_path: "" }.to_json
+  request("post", "/buckets/api/buckets/#{BUCKET_ID}/folder/create/", body: body, content_type: "application/json")
+end
+
+def delete_file
+  request("delete", "/buckets/api/buckets/#{BUCKET_ID}/files/#{FILE_ID}/")
+end
+
+def delete_folder(path = "docs/")
+  request("delete", "/buckets/api/buckets/#{BUCKET_ID}/folder/?path=#{URI.encode_www_form_component(path)}")
+end</code></pre>
+            </section>
+        </div>
+    </div>
+
+    <div>
+        <h2 class="text-xl font-bold dark:text-white mb-3">我的文件 API</h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">下面接口操作“我的文件”区域，不属于存储桶。认证方式同样使用 <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">X-Api-Key</code>。</p>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                        <tr>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">操作</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Method</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">Endpoint</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500 dark:text-gray-400">请求数据</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                        <tr>
+                            <td class="px-4 py-3 dark:text-gray-200">列出文件/文件夹</td>
+                            <td class="px-4 py-3 font-mono text-blue-600 dark:text-blue-400">GET</td>
+                            <td class="px-4 py-3 font-mono dark:text-gray-200">{{ base_url }}/files/api/list/?folder=&lt;folder_id&gt;</td>
+                            <td class="px-4 py-3 text-gray-500 dark:text-gray-400">folder 可选</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 dark:text-gray-200">上传文件</td>
+                            <td class="px-4 py-3 font-mono text-green-600 dark:text-green-400">POST</td>
+                            <td class="px-4 py-3 font-mono dark:text-gray-200">{{ base_url }}/files/api/upload/</td>
+                            <td class="px-4 py-3 text-gray-500 dark:text-gray-400">multipart: files，folder 可选</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 dark:text-gray-200">下载文件</td>
+                            <td class="px-4 py-3 font-mono text-blue-600 dark:text-blue-400">GET</td>
+                            <td class="px-4 py-3 font-mono dark:text-gray-200">{{ base_url }}/files/api/&lt;file_id&gt;/download/</td>
+                            <td class="px-4 py-3 text-gray-500 dark:text-gray-400">返回文件流</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 dark:text-gray-200">删除文件</td>
+                            <td class="px-4 py-3 font-mono text-red-600 dark:text-red-400">DELETE</td>
+                            <td class="px-4 py-3 font-mono dark:text-gray-200">{{ base_url }}/files/api/&lt;file_id&gt;/delete/</td>
+                            <td class="px-4 py-3 text-gray-500 dark:text-gray-400">软删除到回收站</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 dark:text-gray-200">创建文件夹</td>
+                            <td class="px-4 py-3 font-mono text-green-600 dark:text-green-400">POST</td>
+                            <td class="px-4 py-3 font-mono dark:text-gray-200">{{ base_url }}/files/api/folder/create/</td>
+                            <td class="px-4 py-3 font-mono text-gray-500 dark:text-gray-400">{"name":"docs","parent":"&lt;folder_id&gt;"}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

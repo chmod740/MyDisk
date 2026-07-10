@@ -3,8 +3,11 @@ from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_POST
 from .models import User, SiteSettings
 from .captcha import generate_captcha, verify_captcha
+from .throttling import clear_failures, record_failure, request_identifier, throttle_exceeded
 
 
 def captcha_image(request):
@@ -78,6 +81,10 @@ def login_view(request):
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
         password = request.POST.get('password', '')
+        throttle_id = request_identifier(request, username)
+        if throttle_exceeded('login', throttle_id):
+            messages.error(request, '尝试次数过多，请稍后再试')
+            return render(request, 'accounts/login.html', status=429)
 
         # 验证码检查
         if settings.require_captcha_login:
@@ -89,11 +96,17 @@ def login_view(request):
 
         user = authenticate(request, username=username, password=password)
         if user:
+            clear_failures('login', throttle_id)
             login(request, user)
             next_url = request.GET.get('next', '')
-            if next_url:
+            if next_url and url_has_allowed_host_and_scheme(
+                next_url,
+                allowed_hosts={request.get_host()},
+                require_https=request.is_secure(),
+            ):
                 return redirect(next_url)
             return redirect('file_list')
+        record_failure('login', throttle_id)
         messages.error(request, '用户名或密码错误')
         if settings.require_captcha_login:
             generate_captcha(request); ctx = {'captcha_required': True}
@@ -105,6 +118,7 @@ def login_view(request):
     return render(request, 'accounts/login.html', ctx)
 
 
+@require_POST
 def logout_view(request):
     logout(request)
     return redirect('login')

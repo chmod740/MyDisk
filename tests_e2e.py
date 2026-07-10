@@ -123,6 +123,23 @@ def run_tests():
         page.wait_for_load_state('networkidle')
         check('/files' in page.url, '重新登录成功')
 
+        sanitizer_ok = page.evaluate('''() => {
+            const target = document.createElement('div');
+            window.setSanitizedMarkdownHtml(target,
+                '<script>window.__markdownXss=true</script>' +
+                '<img src="x" onerror="window.__markdownXss=true">' +
+                '<a href="javascript:alert(1)">bad</a>' +
+                '<svg onload="window.__markdownXss=true"><circle></circle></svg>' +
+                '<strong class="allowed">safe</strong>'
+            );
+            const link = target.querySelector('a');
+            return !window.__markdownXss
+                && !target.querySelector('script, svg, [onerror], [onload]')
+                && link && !link.hasAttribute('href')
+                && target.querySelector('strong.allowed') !== null;
+        }''')
+        check(sanitizer_ok, 'Markdown XSS 载荷被消毒')
+
         # ============================================================
         # 2. 文件夹操作
         # ============================================================

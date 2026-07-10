@@ -35,7 +35,7 @@
                         <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{{ f.size|filesizeformat }}</td>
                         <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{{ f.mime_type }}</td>
                         <td class="px-4 py-3 text-right">
-                            <a href="{% url 'bucket_file_download' link.bucket.id f.id %}" class="text-sm text-primary-600 hover:underline">下载</a>
+                            <a href="?dl_bucket_file={{ f.id }}" class="text-sm text-primary-600 hover:underline">下载</a>
                         </td>
                     </tr>
                     {% endfor %}

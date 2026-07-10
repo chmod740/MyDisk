@@ -1,7 +1,5 @@
 import mimetypes
 import os
-import zipfile
-import io
 from uuid import UUID
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -9,11 +7,22 @@ from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse, FileResponse, JsonResponse
-from django.db.models import Q, Sum
+from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 from django.core.paginator import Paginator
 
 from .models import Folder, File
+from .services import (
+    QuotaExceeded,
+    ensure_quota,
+    folder_zip_entries,
+    recalculate_storage,
+    replace_stored_file,
+    replace_text_content,
+    validate_path_component,
+    zip_file_response,
+)
 
 
 @login_required
@@ -101,12 +110,12 @@ def _build_tree(folders, parent_id):
 @login_required
 def folder_create(request):
     if request.method == 'POST':
-        name = request.POST.get('name', '').strip()
-        parent_id = request.POST.get('parent', '') or None
-
-        if not name:
-            messages.error(request, '文件夹名不能为空')
+        try:
+            name = validate_path_component(request.POST.get('name'), '文件夹名')
+        except ValueError as exc:
+            messages.error(request, str(exc))
             return redirect('file_list')
+        parent_id = request.POST.get('parent', '') or None
 
         parent = None
         if parent_id:
@@ -130,7 +139,10 @@ def folder_rename(request, folder_id):
     folder = get_object_or_404(Folder, id=folder_id, owner=request.user, is_deleted=False)
 
     if request.method == 'POST':
-        name = request.POST.get('name', '').strip()
+        try:
+            name = validate_path_component(request.POST.get('name'), '文件夹名')
+        except ValueError as exc:
+            return HttpResponse(str(exc), status=400)
         if name:
             # 检测同名
             if Folder.objects.filter(owner=request.user, parent=folder.parent,
@@ -206,6 +218,12 @@ def file_upload(request):
             messages.error(request, '未选择文件')
             return redirect(request.META.get('HTTP_REFERER', 'file_list'))
 
+        try:
+            for upload in uploaded_files:
+                validate_path_component(upload.name, '文件名')
+        except ValueError as exc:
+            return JsonResponse({'error': str(exc)}, status=400)
+
         # 检查同名冲突
         new_names = [f.name for f in uploaded_files]
         existing = set(File.objects.filter(
@@ -218,39 +236,63 @@ def file_upload(request):
         if conflicts and resolve_mode != 'resolved':
             return JsonResponse({'conflicts': conflicts, 'status': 'conflict'}, status=409)
 
+        existing_files = {
+            f.name: f for f in File.objects.filter(
+                owner=request.user, folder=folder, name__in=existing, is_deleted=False,
+            )
+        }
+        net_size = 0
+        for upload in uploaded_files:
+            action = request.POST.get(f'_action_{upload.name}', 'skip') if upload.name in existing else 'create'
+            if action == 'skip':
+                continue
+            if action == 'overwrite':
+                net_size += upload.size - existing_files[upload.name].size
+            else:
+                net_size += upload.size
+
         created = 0
         overwritten = 0
         skipped = 0
-        for f in uploaded_files:
-            if f.name in existing and resolve_mode == 'resolved':
-                action = request.POST.get(f'_action_{f.name}', 'skip')
-                if action == 'skip':
-                    skipped += 1
-                    continue
-                elif action == 'overwrite':
-                    old = File.objects.get(owner=request.user, folder=folder, name=f.name, is_deleted=False)
-                    old.file.delete(save=False)
-                    old.delete()
-                    overwritten += 1
-                elif action == 'rename':
-                    base, ext = os.path.splitext(f.name)
-                    counter = 1
-                    new_name = f'{base} ({counter}){ext}'
-                    while File.objects.filter(owner=request.user, folder=folder, name=new_name, is_deleted=False).exists():
-                        counter += 1
-                        new_name = f'{base} ({counter}){ext}'
-                    f.name = new_name
+        try:
+            with transaction.atomic():
+                ensure_quota(request.user, net_size)
+                for f in uploaded_files:
+                    if f.name in existing and resolve_mode == 'resolved':
+                        action = request.POST.get(f'_action_{f.name}', 'skip')
+                        if action == 'skip':
+                            skipped += 1
+                            continue
+                        if action == 'overwrite':
+                            old = existing_files[f.name]
+                            mime_type, _ = mimetypes.guess_type(f.name)
+                            replace_stored_file(
+                                old, f, size=f.size,
+                                mime_type=mime_type or 'application/octet-stream',
+                            )
+                            overwritten += 1
+                            continue
+                        if action == 'rename':
+                            base, ext = os.path.splitext(f.name)
+                            counter = 1
+                            new_name = f'{base} ({counter}){ext}'
+                            while File.objects.filter(owner=request.user, folder=folder, name=new_name, is_deleted=False).exists():
+                                counter += 1
+                                new_name = f'{base} ({counter}){ext}'
+                            f.name = new_name
 
-            mime_type, _ = mimetypes.guess_type(f.name)
-            mime_type = mime_type or 'application/octet-stream'
-            try:
-                File.objects.create(
-                    name=f.name, file=f, size=f.size,
-                    mime_type=mime_type, folder=folder, owner=request.user,
-                )
-                created += 1
-            except Exception:
-                skipped += 1
+                    mime_type, _ = mimetypes.guess_type(f.name)
+                    File.objects.create(
+                        name=f.name, file=f, size=f.size,
+                        mime_type=mime_type or 'application/octet-stream',
+                        folder=folder, owner=request.user,
+                    )
+                    created += 1
+        except QuotaExceeded:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.headers.get('HX-Request'):
+                return JsonResponse({'error': '存储空间不足'}, status=413)
+            messages.error(request, '存储空间不足')
+            return redirect(request.META.get('HTTP_REFERER', 'file_list'))
 
         _recalc_storage(request.user)
 
@@ -293,8 +335,8 @@ def file_preview(request, file_id):
         try:
             with open(file_obj.file.path, 'r', encoding='utf-8') as f:
                 ctx['content'] = f.read(50000)
-        except Exception as e:
-            ctx['content'] = f'[读取错误: {type(e).__name__} — {e}]'
+        except (OSError, UnicodeError):
+            ctx['content'] = '[读取错误: 无法读取文件]'
     elif file_obj.is_pdf:
         ctx['preview_type'] = 'pdf'
     else:
@@ -312,12 +354,14 @@ def file_edit(request, file_id):
 
     if request.method == 'POST':
         new_content = request.POST.get('content', '')
-        # 写入文件
-        with open(file_obj.file.path, 'w', encoding='utf-8', newline='') as f:
-            f.write(new_content)
-        # 更新文件大小
-        file_obj.size = len(new_content.encode('utf-8'))
-        file_obj.save(update_fields=['size', 'updated_at'])
+        new_size = len(new_content.encode('utf-8'))
+        try:
+            with transaction.atomic():
+                ensure_quota(request.user, new_size - file_obj.size)
+                replace_text_content(file_obj, new_content)
+        except QuotaExceeded:
+            messages.error(request, '存储空间不足')
+            return redirect('file_edit', file_id=file_obj.id)
         _recalc_storage(request.user)
         messages.success(request, f'"{file_obj.name}" 已保存')
         redirect_url = reverse('file_list')
@@ -328,7 +372,7 @@ def file_edit(request, file_id):
     try:
         with open(file_obj.file.path, 'r', encoding='utf-8') as f:
             content = f.read()
-    except Exception:
+    except (OSError, UnicodeError):
         content = ''
 
     return render(request, 'files/markdown_edit.html', {
@@ -342,7 +386,10 @@ def file_rename(request, file_id):
     file_obj = get_object_or_404(File, id=file_id, owner=request.user, is_deleted=False)
 
     if request.method == 'POST':
-        name = request.POST.get('name', '').strip()
+        try:
+            name = validate_path_component(request.POST.get('name'), '文件名')
+        except ValueError as exc:
+            return HttpResponse(str(exc), status=400)
         if name:
             file_obj.name = name
             file_obj.save(update_fields=['name', 'updated_at'])
@@ -476,15 +523,11 @@ def batch_download(request):
 
         files_qs = File.objects.filter(id__in=file_ids, owner=request.user, is_deleted=False)
 
-        buf = io.BytesIO()
-        with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
-            for f in files_qs:
-                zf.write(f.file.path, f.name)
-
-        buf.seek(0)
-        response = HttpResponse(buf, content_type='application/zip')
-        response['Content-Disposition'] = 'attachment; filename="download.zip"'
-        return response
+        entries = [(f.file.path, f.name) for f in files_qs]
+        try:
+            return zip_file_response(entries, 'download')
+        except ValueError as exc:
+            return HttpResponse(str(exc), status=400)
 
     return HttpResponse(status=405)
 
@@ -493,22 +536,15 @@ def batch_download(request):
 def folder_download(request, folder_id):
     """下载整个目录为 zip 包"""
     folder = get_object_or_404(Folder, id=folder_id, owner=request.user, is_deleted=False)
-    buf = io.BytesIO()
-    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
-        _add_folder_to_zip(zf, folder, '')
-
-    buf.seek(0)
-    response = HttpResponse(buf, content_type='application/zip')
-    response['Content-Disposition'] = f'attachment; filename="{folder.name}.zip"'
-    return response
+    try:
+        return zip_file_response(folder_zip_entries(folder), folder.name)
+    except ValueError as exc:
+        return HttpResponse(str(exc), status=400)
 
 
-def _add_folder_to_zip(zf, folder, prefix):
-    """递归将文件夹内容加入 zip"""
-    for f in File.objects.filter(folder=folder, is_deleted=False):
-        zf.write(f.file.path, prefix + f.name)
-    for child in Folder.objects.filter(parent=folder, is_deleted=False):
-        _add_folder_to_zip(zf, child, prefix + child.name + '/')
+def _folder_zip_entries(folder):
+    """保留给现有调用方的兼容入口。"""
+    return folder_zip_entries(folder)
 
 
 # ── 回收站 ──
@@ -657,13 +693,7 @@ def trash_destroy(request, item_type, item_id):
 
     if item_type == 'file':
         obj = get_object_or_404(File, id=item_id, owner=request.user, is_deleted=True)
-        file_path = obj.file.path if obj.file else None
         obj.delete()
-        if file_path:
-            try:
-                os.remove(file_path)
-            except OSError:
-                pass
     else:
         obj = get_object_or_404(Folder, id=item_id, owner=request.user, is_deleted=True)
         _destroy_folder(obj)
@@ -674,20 +704,10 @@ def trash_destroy(request, item_type, item_id):
 
 
 def _destroy_folder(folder):
-    for child in Folder.objects.filter(parent=folder, is_deleted=True):
-        _destroy_folder(child)
-    for f in File.objects.filter(folder=folder, is_deleted=True):
-        f.file.delete(save=False)
-        f.delete()
     folder.delete()
 
 
 # ── 工具函数 ──
 
 def _recalc_storage(user):
-    total = File.objects.filter(owner=user, is_deleted=False).aggregate(s=Sum('size'))['s'] or 0
-    # Include bucket file sizes
-    from buckets.models import BucketFile
-    bucket_total = BucketFile.objects.filter(bucket__owner=user).aggregate(s=Sum('size'))['s'] or 0
-    from accounts.models import User
-    User.objects.filter(pk=user.pk).update(storage_used=total + bucket_total)
+    return recalculate_storage(user)

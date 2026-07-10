@@ -5,13 +5,18 @@ import tempfile
 from uuid import uuid4
 
 from django.test import TestCase, Client
+from django.test import override_settings
 from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.management import call_command
+from django.db import transaction
 from django.utils import timezone
 from datetime import timedelta
 
 from accounts.models import User
+from buckets.models import ApiKey
 from .models import Folder, File
+from .services import replace_stored_file
 
 
 class FileModelTests(TestCase):
@@ -321,7 +326,7 @@ class FileOperationTests(TestCase):
     def test_file_rename_empty_name(self):
         url = reverse('file_rename', args=[self.file.id])
         resp = self.client.post(url, {'name': ''})
-        self.assertEqual(resp.status_code, 200)  # re-renders form
+        self.assertEqual(resp.status_code, 400)
 
     def test_file_delete(self):
         url = reverse('file_delete', args=[self.file.id])
@@ -377,6 +382,24 @@ class FileOperationTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'text')
         self.assertContains(resp, 'original content')
+
+    def test_markdown_preview_includes_application_theme_support(self):
+        markdown = File.objects.create(
+            name='readme.md',
+            file=SimpleUploadedFile('readme.md', b'# Preview'),
+            size=9, mime_type='text/markdown', owner=self.user,
+        )
+
+        resp = self.client.get(reverse('file_preview', args=[markdown.id]))
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, '.dark .markdown-body')
+        self.assertContains(resp, 'background-color: #0d1117')
+        self.assertContains(resp, 'window.renderMarkdownMermaid')
+        self.assertContains(resp, 'window.setSanitizedMarkdownHtml')
+        self.assertContains(resp, 'js/markdown-sanitize.js')
+        self.assertNotContains(resp, 'el.innerHTML = html')
+        self.assertContains(resp, 'MutationObserver')
 
     def test_file_preview_pdf(self):
         pdf = SimpleUploadedFile('doc.pdf', b'%PDF-1.4 fake pdf', content_type='application/pdf')
@@ -447,6 +470,67 @@ class FolderOperationTests(TestCase):
 
         folder.refresh_from_db()
         self.assertTrue(folder.is_deleted)
+
+    def test_folder_download_uses_current_folder_name(self):
+        parent = Folder.objects.create(name='Parent', owner=self.user)
+        folder = Folder.objects.create(name='Current', parent=parent, owner=self.user)
+        File.objects.create(
+            name='root.txt', file=SimpleUploadedFile('root.txt', b'root'),
+            size=4, mime_type='text/plain', folder=folder, owner=self.user,
+        )
+
+        resp = self.client.get(reverse('folder_download', args=[folder.id]))
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'application/zip')
+        self.assertIn('filename="Current.zip"', resp['Content-Disposition'])
+        self.assertNotIn('Parent.zip', resp['Content-Disposition'])
+
+    def test_folder_download_uses_paths_relative_to_current_folder(self):
+        folder = Folder.objects.create(name='Current', owner=self.user)
+        child = Folder.objects.create(name='Child', parent=folder, owner=self.user)
+        File.objects.create(
+            name='root.txt', file=SimpleUploadedFile('root.txt', b'root'),
+            size=4, mime_type='text/plain', folder=folder, owner=self.user,
+        )
+        File.objects.create(
+            name='nested.txt', file=SimpleUploadedFile('nested.txt', b'nested'),
+            size=6, mime_type='text/plain', folder=child, owner=self.user,
+        )
+
+        resp = self.client.get(reverse('folder_download', args=[folder.id]))
+        with zipfile.ZipFile(io.BytesIO(b''.join(resp.streaming_content))) as zf:
+            names = zf.namelist()
+
+        self.assertCountEqual(names, ['root.txt', 'Child/nested.txt'])
+        self.assertNotIn('Current/root.txt', names)
+
+    def test_folder_download_excludes_deleted_files(self):
+        folder = Folder.objects.create(name='Current', owner=self.user)
+        File.objects.create(
+            name='active.txt', file=SimpleUploadedFile('active.txt', b'active'),
+            size=6, mime_type='text/plain', folder=folder, owner=self.user,
+        )
+        File.objects.create(
+            name='deleted.txt', file=SimpleUploadedFile('deleted.txt', b'deleted'),
+            size=7, mime_type='text/plain', folder=folder, owner=self.user,
+            is_deleted=True,
+        )
+
+        resp = self.client.get(reverse('folder_download', args=[folder.id]))
+        with zipfile.ZipFile(io.BytesIO(b''.join(resp.streaming_content))) as zf:
+            names = zf.namelist()
+
+        self.assertEqual(names, ['active.txt'])
+
+    def test_folder_download_rejects_other_user(self):
+        folder = Folder.objects.create(name='Private', owner=self.user)
+        other = User.objects.create_user('other', password='testpass123')
+        self.client.login(username='other', password='testpass123')
+
+        resp = self.client.get(reverse('folder_download', args=[folder.id]))
+
+        self.assertEqual(resp.status_code, 404)
 
 
 class BatchOperationTests(TestCase):
@@ -547,7 +631,7 @@ class BatchOperationTests(TestCase):
         self.assertEqual(resp['Content-Type'], 'application/zip')
 
         # Verify zip content
-        zf = zipfile.ZipFile(io.BytesIO(resp.content))
+        zf = zipfile.ZipFile(io.BytesIO(b''.join(resp.streaming_content)))
         names = zf.namelist()
         self.assertIn('a.txt', names)
         self.assertIn('b.txt', names)
@@ -701,6 +785,49 @@ class StorageTrackingTests(TestCase):
         self.user.refresh_from_db()
         self.assertEqual(self.user.storage_used, 300)
 
+    def test_upload_over_quota_is_rejected(self):
+        self.user.storage_quota = 3
+        self.user.save(update_fields=['storage_quota'])
+
+        resp = self.client.post(
+            reverse('file_upload'),
+            {'files': [SimpleUploadedFile('too-big.bin', b'1234')]},
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+
+        self.assertEqual(resp.status_code, 413)
+        self.assertFalse(File.objects.filter(owner=self.user, name='too-big.bin').exists())
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.storage_used, 0)
+
+    def test_file_size_updates_storage_by_delta(self):
+        file_obj = File.objects.create(
+            name='delta.txt', file=SimpleUploadedFile('delta.txt', b'123'),
+            size=3, mime_type='text/plain', owner=self.user,
+        )
+        file_obj.size = 8
+        file_obj.save(update_fields=['size'])
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.storage_used, 8)
+
+        file_obj.size = 2
+        file_obj.save(update_fields=['size'])
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.storage_used, 2)
+
+    def test_recalculate_storage_command_repairs_usage(self):
+        File.objects.create(
+            name='active.txt', file=SimpleUploadedFile('active.txt', b'1234'),
+            size=4, mime_type='text/plain', owner=self.user,
+        )
+        self.user.storage_used = 999
+        self.user.save(update_fields=['storage_used'])
+
+        call_command('recalculate_storage', user=self.user.username, verbosity=0)
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.storage_used, 4)
+
 
 class CleanupTrashCommandTests(TestCase):
     def setUp(self):
@@ -738,6 +865,123 @@ class CleanupTrashCommandTests(TestCase):
         call_command('cleanup_trash')
 
         self.assertTrue(File.objects.filter(id=active.id).exists())
+
+
+class FileApiTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user('api-file-user', password='testpass123')
+        self.raw_key, key_hash, prefix = ApiKey.generate_key()
+        ApiKey.objects.create(
+            user=self.user, name='files', key_hash=key_hash, prefix=prefix,
+        )
+
+    def test_api_upload_and_delete_keep_storage_usage_in_sync(self):
+        resp = self.client.post(
+            reverse('api_file_upload'),
+            {'files': [SimpleUploadedFile('api.txt', b'12345')]},
+            HTTP_X_API_KEY=self.raw_key,
+        )
+        self.assertEqual(resp.status_code, 201)
+        file_obj = File.objects.get(owner=self.user, name='api.txt')
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.storage_used, 5)
+
+        resp = self.client.delete(
+            reverse('api_file_delete', args=[file_obj.id]),
+            HTTP_X_API_KEY=self.raw_key,
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.storage_used, 0)
+
+    def test_api_upload_over_quota_is_atomic(self):
+        self.user.storage_quota = 5
+        self.user.save(update_fields=['storage_quota'])
+
+        resp = self.client.post(
+            reverse('api_file_upload'),
+            {
+                'files': [
+                    SimpleUploadedFile('a.txt', b'123'),
+                    SimpleUploadedFile('b.txt', b'456'),
+                ],
+            },
+            HTTP_X_API_KEY=self.raw_key,
+        )
+
+        self.assertEqual(resp.status_code, 413)
+        self.assertEqual(File.objects.filter(owner=self.user).count(), 0)
+
+
+class PhysicalFileLifecycleTests(TestCase):
+    def setUp(self):
+        self.media_dir = tempfile.TemporaryDirectory()
+        self.override = override_settings(MEDIA_ROOT=self.media_dir.name)
+        self.override.enable()
+        self.addCleanup(self.override.disable)
+        self.addCleanup(self.media_dir.cleanup)
+        self.user = User.objects.create_user('lifecycle', password='testpass123')
+
+    def test_hard_delete_removes_file_after_commit(self):
+        file_obj = File.objects.create(
+            name='delete.txt', file=SimpleUploadedFile('delete.txt', b'delete'),
+            size=6, mime_type='text/plain', owner=self.user,
+        )
+        path = file_obj.file.path
+        self.assertTrue(os.path.exists(path))
+
+        with self.captureOnCommitCallbacks(execute=True):
+            file_obj.delete()
+
+        self.assertFalse(os.path.exists(path))
+
+    def test_rollback_keeps_physical_file(self):
+        file_obj = File.objects.create(
+            name='keep.txt', file=SimpleUploadedFile('keep.txt', b'keep'),
+            size=4, mime_type='text/plain', owner=self.user,
+        )
+        file_id = file_obj.pk
+        path = file_obj.file.path
+
+        with self.assertRaises(RuntimeError):
+            with transaction.atomic():
+                file_obj.delete()
+                raise RuntimeError('rollback')
+
+        self.assertTrue(File.objects.filter(pk=file_id).exists())
+        self.assertTrue(os.path.exists(path))
+
+    def test_failed_replacement_preserves_old_file(self):
+        file_obj = File.objects.create(
+            name='replace.txt', file=SimpleUploadedFile('replace.txt', b'old'),
+            size=3, mime_type='text/plain', owner=self.user,
+        )
+        old_name = file_obj.file.name
+        old_path = file_obj.file.path
+
+        from unittest.mock import patch
+        with patch.object(file_obj.file.storage, 'save', side_effect=OSError('storage failed')):
+            with self.assertRaises(OSError):
+                with transaction.atomic():
+                    replace_stored_file(
+                        file_obj, SimpleUploadedFile('replace.txt', b'new'), size=3,
+                    )
+
+        file_obj.refresh_from_db()
+        self.assertEqual(file_obj.file.name, old_name)
+        self.assertTrue(os.path.exists(old_path))
+
+
+class MarkdownSanitizerTests(TestCase):
+    def test_sanitizer_rejects_common_xss_vectors(self):
+        from django.conf import settings
+        source = (settings.BASE_DIR / 'static/js/markdown-sanitize.js').read_text()
+
+        self.assertIn("'script', 'style', 'iframe'", source)
+        self.assertIn("name.indexOf('on') === 0", source)
+        self.assertIn('javascript:', source)
+        self.assertIn('target.replaceChildren.apply', source)
 
 
 class SecurityTests(TestCase):

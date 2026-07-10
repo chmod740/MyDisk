@@ -1,10 +1,12 @@
 from django.test import TestCase, Client
 from django.urls import reverse
+from django.core.cache import cache
 from .models import User
 
 
 class RegistrationTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.client = Client()
         self.url = reverse('register')
 
@@ -86,6 +88,7 @@ class RegistrationTests(TestCase):
 
 class LoginTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.client = Client()
         self.user = User.objects.create_user('testuser', password='testpass123')
         self.url = reverse('login')
@@ -127,8 +130,37 @@ class LoginTests(TestCase):
 
     def test_logout(self):
         self.client.login(username='testuser', password='testpass123')
-        resp = self.client.get(reverse('logout'))
+        resp = self.client.post(reverse('logout'))
         self.assertRedirects(resp, reverse('login'))
+
+    def test_logout_rejects_get(self):
+        self.client.login(username='testuser', password='testpass123')
+        resp = self.client.get(reverse('logout'))
+        self.assertEqual(resp.status_code, 405)
+
+    def test_login_rejects_external_next_url(self):
+        resp = self.client.post(f'{self.url}?next=https://evil.example/phish', {
+            'username': 'testuser',
+            'password': 'testpass123',
+        })
+        self.assertRedirects(resp, reverse('file_list'))
+
+    def test_login_rejects_protocol_relative_next_url(self):
+        resp = self.client.post(f'{self.url}?next=//evil.example/phish', {
+            'username': 'testuser',
+            'password': 'testpass123',
+        })
+        self.assertRedirects(resp, reverse('file_list'))
+
+    def test_login_rate_limit(self):
+        for _ in range(5):
+            self.client.post(self.url, {
+                'username': 'testuser', 'password': 'wrong',
+            })
+        resp = self.client.post(self.url, {
+            'username': 'testuser', 'password': 'wrong',
+        })
+        self.assertEqual(resp.status_code, 429)
 
 
 class ProfileTests(TestCase):
@@ -174,7 +206,8 @@ class CaptchaTests(TestCase):
         request.session.save()
 
         q = self.generate(request)
-        self.assertIn('?', q)
+        self.assertIsInstance(q, bytes)
+        self.assertTrue(q.startswith(b'\x89PNG\r\n\x1a\n'))
         self.assertIn('captcha_answer', request.session)
 
     def test_verify_correct(self):

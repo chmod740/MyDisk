@@ -4,7 +4,7 @@ services:
     environment:
       POSTGRES_DB: django_disk
       POSTGRES_USER: django
-      POSTGRES_PASSWORD: diskpass123
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -17,10 +17,11 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgres://django:diskpass123@db:5432/django_disk
-      DJANGO_SECRET_KEY: docker-prod-secret-key-change-me
+      DATABASE_URL: postgresql://django:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/django_disk
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY in .env}
       DJANGO_DEBUG: "false"
-      DJANGO_ALLOWED_HOSTS: "*"
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-https://localhost}
     volumes:
       - media_data:/app/media
     depends_on:
