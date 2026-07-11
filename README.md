@@ -6,7 +6,7 @@
 
 ## 项目状态
 
-- Django 单元测试：223 项全部通过
+- Django 单元测试：226 项全部通过
 - 生产配置：`python manage.py check --deploy` 通过
 - 数据库迁移：`makemigrations --check --dry-run` 无遗漏
 - CI：GitHub Actions 分别运行单元测试和 Playwright E2E
@@ -54,7 +54,9 @@
 - 🌐 调用示例覆盖 cURL、JavaScript/TypeScript、Python、Go、PHP、Java、C# 和 Ruby
 
 ### 其他
-- 🌓 暗色模式（全局支持，Markdown 渲染区自适应）
+- 🌓 全局浅色/暗色模式，登录页、公开桶和分享页等未登录页面也可直接切换
+- 📱 响应式布局：移动端使用抽屉式导航，桌面端保留固定侧栏
+- 📝 Markdown 渲染区、编辑器、表单、弹窗和 Django 管理后台均适配主题
 - 🛡 Markdown 允许列表消毒，拦截脚本、事件属性和危险 URL
 - 📊 统一存储配额、用量追踪和事务提交后的物理文件清理
 - 📥 ZIP 使用临时文件流式返回，并防止 Zip Slip 路径穿越
@@ -139,7 +141,7 @@ django_disk/
 
 ```bash
 # 单元测试
-python manage.py test accounts buckets sharing files
+python manage.py test
 
 # 检查模型变更是否已生成迁移
 python manage.py makemigrations --check --dry-run
@@ -150,6 +152,8 @@ python tests_e2e.py
 ```
 
 GitHub Actions 会分别运行单元测试和 Playwright E2E 测试。
+
+界面主题已在隔离测试数据上覆盖登录注册、文件与回收站、Markdown 编辑预览、存储桶、API 文档、分享页面、自定义管理面板和 Django 管理后台。桌面端逐页验证浅色与暗色模式，移动端同时验证主题切换、导航抽屉、横向溢出和资源加载。
 
 ## 运维命令
 

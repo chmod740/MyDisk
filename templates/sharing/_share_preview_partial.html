@@ -112,7 +112,7 @@
     {% elif file.is_text %}
         <pre class="mx-4 mb-4 bg-gray-900 text-green-400 p-4 rounded-lg overflow-auto max-h-[50vh] text-sm"><code>{{ file_content|default:"无法读取文件内容" }}</code></pre>
     {% else %}
-        <div class="text-center py-8 text-gray-400 dark:text-gray-500">
+        <div class="text-center py-8 text-gray-500 dark:text-gray-400">
             <p>此文件类型不支持在线预览</p>
             <p class="text-sm mt-1">{{ file.mime_type }}</p>
         </div>

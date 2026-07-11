@@ -13,7 +13,7 @@
             <div class="mb-3">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">网站名称</label>
                 <input type="text" name="site_name" value="{{ settings.site_name|default:'DjangoDisk' }}"
-                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-primary-500">
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100">
             </div>
         </div>
 
@@ -45,14 +45,14 @@
             <div>
                 <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">无默认组时新用户的存储配额 (bytes)</label>
                 <input type="number" name="default_storage_quota" value="{{ settings.default_storage_quota }}" min="1"
-                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-primary-500">
-                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">当前值: {{ settings.default_storage_quota|filesizeformat }} (默认 1GB = 1073741824)</p>
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">当前值: {{ settings.default_storage_quota|filesizeformat }} (默认 1GB = 1073741824)</p>
             </div>
         </div>
 
         <div>
             <h3 class="text-lg font-semibold dark:text-white mb-3">默认用户组</h3>
-            <select name="default_group" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm">
+            <select name="default_group" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm dark:bg-gray-700 dark:text-gray-100">
                 <option value="">-- 无默认组 --</option>
                 {% for g in groups %}
                 <option value="{{ g.id }}" {% if settings.default_group == g %}selected{% endif %}>
@@ -60,7 +60,7 @@
                 </option>
                 {% endfor %}
             </select>
-            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">新注册用户将自动加入该组并使用该组的存储配额</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">新注册用户将自动加入该组并使用该组的存储配额</p>
         </div>
 
         <button type="submit" class="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">

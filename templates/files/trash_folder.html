@@ -5,8 +5,8 @@
 <div class="max-w-5xl mx-auto">
     <div class="flex items-center justify-between mb-4">
         <div class="flex items-center space-x-2">
-            <a href="{% url 'trash' %}" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">&larr; 回收站</a>
-            <span class="text-gray-400 dark:text-gray-500">/</span>
+            <a href="{% url 'trash' %}" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">&larr; 回收站</a>
+            <span class="text-gray-500 dark:text-gray-400">/</span>
             <h1 class="text-xl font-bold dark:text-white">📁 {{ folder.name }}</h1>
         </div>
         <form method="post" action="{% url 'trash_restore' 'folder' folder.id %}" class="inline">
@@ -17,7 +17,7 @@
 
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         {% if not sub_folders and not sub_files %}
-        <div class="px-4 py-12 text-center text-gray-400 dark:text-gray-500">此目录为空</div>
+        <div class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">此目录为空</div>
         {% else %}
         <table class="w-full">
             <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
@@ -43,7 +43,7 @@
                         </form>
                         <form method="post" action="{% url 'trash_destroy' 'folder' sf.id %}" class="inline">
                             {% csrf_token %}
-                            <button class="text-sm text-red-500 hover:underline" onclick="return confirm('彻底删除后将无法恢复，确定？')">彻底删除</button>
+                            <button class="text-sm text-red-600 dark:text-red-400 hover:underline" onclick="return confirm('彻底删除后将无法恢复，确定？')">彻底删除</button>
                         </form>
                     </td>
                 </tr>
@@ -59,7 +59,7 @@
                         </form>
                         <form method="post" action="{% url 'trash_destroy' 'file' sf.id %}" class="inline">
                             {% csrf_token %}
-                            <button class="text-sm text-red-500 hover:underline" onclick="return confirm('彻底删除后将无法恢复，确定？')">彻底删除</button>
+                            <button class="text-sm text-red-600 dark:text-red-400 hover:underline" onclick="return confirm('彻底删除后将无法恢复，确定？')">彻底删除</button>
                         </form>
                     </td>
                 </tr>

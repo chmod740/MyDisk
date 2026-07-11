@@ -2,7 +2,7 @@
     <div class="flex items-center justify-between mb-4">
         <h1 class="text-xl font-bold dark:text-white truncate">{{ file.name }}</h1>
         <div class="flex items-center space-x-2">
-            {% if file.extension == '.md' %}<a href="{% url 'file_edit' file.id %}" class="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700">编辑</a>{% endif %}
+            {% if file.extension == '.md' %}<a href="{% url 'file_edit' file.id %}" class="px-4 py-2 bg-green-700 text-white text-sm rounded-lg hover:bg-green-800">编辑</a>{% endif %}
             <a href="{% url 'file_download' file.id %}" class="px-4 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700">下载</a>
             <a href="{% url 'file_list' %}{% if file.folder %}?folder={{ file.folder.id }}{% endif %}"
                class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300">返回</a>
@@ -129,7 +129,7 @@
         {% else %}
             <div class="text-center py-12">
                 <p class="text-gray-500 dark:text-gray-400">此文件类型不支持在线预览</p>
-                <p class="text-gray-400 dark:text-gray-500 text-sm mt-1">{{ file.mime_type }}</p>
+                <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">{{ file.mime_type }}</p>
             </div>
         {% endif %}
     </div>

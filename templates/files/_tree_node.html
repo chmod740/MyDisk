@@ -5,7 +5,7 @@
         <div class="flex items-center justify-between px-3 py-1.5 text-sm rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
             <a href="{{ tree_link_prefix }}?path={{ node.id }}"
                hx-get="{{ tree_link_prefix }}?path={{ node.id }}" hx-target="#main-content" hx-push-url="true"
-               class="flex-1 truncate text-xs {% if current_folder and current_folder.id == node.id %}text-primary-700 font-medium{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+               class="flex-1 truncate text-xs {% if current_folder and current_folder.id == node.id %}text-primary-700 dark:text-primary-300 font-medium{% else %}text-gray-700 dark:text-gray-300{% endif %}">
                 📁 {{ node.name }}
             </a>
             <button @click="open = !open" class="text-gray-400 hover:text-gray-600 ml-1 flex-shrink-0">
@@ -23,7 +23,7 @@
     <div class="px-3 py-1.5 text-sm">
         <a href="{{ tree_link_prefix }}?path={{ node.id }}"
            hx-get="{{ tree_link_prefix }}?path={{ node.id }}" hx-target="#main-content" hx-push-url="true"
-           class="block truncate text-xs {% if current_folder and current_folder.id == node.id %}text-primary-700 font-medium{% else %}text-gray-700 dark:text-gray-300{% endif %} hover:text-primary-600">
+           class="block truncate text-xs {% if current_folder and current_folder.id == node.id %}text-primary-700 dark:text-primary-300 font-medium{% else %}text-gray-700 dark:text-gray-300{% endif %} hover:text-primary-600 dark:hover:text-primary-300">
             📁 {{ node.name }}
         </a>
     </div>
@@ -35,7 +35,7 @@
         <div class="flex items-center justify-between px-3 py-1.5 text-sm rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
             <a href="{% url 'file_list' %}?folder={{ node.id }}"
                hx-get="{% url 'file_list' %}?folder={{ node.id }}" hx-target="#main-content" hx-push-url="true"
-               class="flex-1 truncate text-xs {% if current_folder and current_folder.id == node.id %}text-primary-700 font-medium{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+               class="flex-1 truncate text-xs {% if current_folder and current_folder.id == node.id %}text-primary-700 dark:text-primary-300 font-medium{% else %}text-gray-700 dark:text-gray-300{% endif %}">
                 📁 {{ node.name }}
             </a>
             <button @click="open = !open" class="text-gray-400 hover:text-gray-600 ml-1 flex-shrink-0">
@@ -53,7 +53,7 @@
     <div class="px-3 py-1.5 text-sm">
         <a href="{% url 'file_list' %}?folder={{ node.id }}"
            hx-get="{% url 'file_list' %}?folder={{ node.id }}" hx-target="#main-content" hx-push-url="true"
-           class="block truncate text-xs {% if current_folder and current_folder.id == node.id %}text-primary-700 font-medium{% else %}text-gray-700 dark:text-gray-300{% endif %} hover:text-primary-600">
+           class="block truncate text-xs {% if current_folder and current_folder.id == node.id %}text-primary-700 dark:text-primary-300 font-medium{% else %}text-gray-700 dark:text-gray-300{% endif %} hover:text-primary-600 dark:hover:text-primary-300">
             📁 {{ node.name }}
         </a>
     </div>

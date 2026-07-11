@@ -10,13 +10,13 @@
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">组名称</label>
             <input type="text" name="name" value="{{ group.name|default:'' }}" required
-                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500">
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100">
         </div>
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">存储配额 (bytes)</label>
             <input type="number" name="quota" value="{{ group.storage_quota|default:'1073741824' }}" required min="1"
-                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500">
-            <p class="text-xs text-gray-400 mt-1">默认 1GB = 1073741824 bytes</p>
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">默认 1GB = 1073741824 bytes</p>
         </div>
         <label class="flex items-center text-sm">
             <input type="checkbox" name="is_default" class="rounded mr-2"
@@ -24,7 +24,7 @@
             <span class="text-sm dark:text-gray-300">设为默认组（新注册用户自动加入）</span>
         </label>
         <div class="flex justify-end space-x-2 pt-2">
-            <a href="{% url 'admin_group_list' %}" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700">取消</a>
+            <a href="{% url 'admin_group_list' %}" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800 dark:text-gray-200">取消</a>
             <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700">
                 {% if group %}保存{% else %}创建{% endif %}
             </button>

@@ -123,12 +123,12 @@
     <div class="flex items-center justify-between mb-3">
         <div class="flex items-center space-x-3">
             <a href="{% url 'file_list' %}{% if file.folder %}?folder={{ file.folder.id }}{% endif %}"
-               class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">&larr; 返回</a>
+               class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">&larr; 返回</a>
             <h1 class="text-lg font-bold dark:text-white truncate max-w-md">{{ file.name }}</h1>
-            <span class="text-xs text-gray-400 dark:text-gray-500 hidden sm:inline" id="status-bar">就绪</span>
+            <span class="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline" id="status-bar">就绪</span>
         </div>
         <div class="flex items-center space-x-2">
-            <span class="text-xs text-gray-400 dark:text-gray-500 hidden sm:inline" id="word-count"></span>
+            <span class="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline" id="word-count"></span>
             <form method="post" id="edit-form">
                 {% csrf_token %}
                 <input type="hidden" name="content" id="content-input">

@@ -10,10 +10,10 @@
     <script src="{% static 'js/markdown-sanitize.js' %}"></script>
     <script>tailwind.config={darkMode:"class",theme:{extend:{colors:{primary:{500:"#3b82f6",600:"#2563eb",700:"#1d4ed8"}}}}};if(localStorage.getItem("theme")==="dark")document.documentElement.classList.add("dark");</script>
 </head>
-<body class="h-full bg-gray-50 dark:bg-gray-900" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<body class="h-full bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     <div class="max-w-4xl mx-auto py-12 px-4">
         <div class="text-center mb-6">
-            <div class="text-sm text-gray-400 dark:text-gray-500 mb-1">{{ link.owner.username }} 分享的文件夹</div>
+            <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">{{ link.owner.username }} 分享的文件夹</div>
             <h1 class="text-2xl font-bold dark:text-white">📁 {{ folder.name }}</h1>
         </div>
 
@@ -29,7 +29,7 @@
 
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
             {% if not files and not subfolders %}
-            <div class="px-4 py-12 text-center text-gray-400 dark:text-gray-500">此文件夹为空</div>
+            <div class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">此文件夹为空</div>
             {% else %}
             <table class="w-full">
                 <thead class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
@@ -52,7 +52,7 @@
                         <td class="px-4 py-3 text-sm dark:text-gray-200">
                             <a href="?preview={{ f.id }}"
                                hx-get="?preview={{ f.id }}" hx-target="#preview-container" hx-swap="innerHTML"
-                               class="hover:text-primary-600 cursor-pointer">📄 {{ f.name }}</a>
+                               class="hover:text-primary-600 dark:hover:text-blue-400 cursor-pointer">📄 {{ f.name }}</a>
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                             {% if f.size < 1024 %}{{ f.size }} B{% elif f.size < 1048576 %}{% widthratio f.size 1024 1 %} KB{% else %}{% widthratio f.size 1048576 1 %} MB{% endif %}
@@ -60,8 +60,8 @@
                         <td class="px-4 py-3 text-right">
                             <a href="?preview={{ f.id }}"
                                hx-get="?preview={{ f.id }}" hx-target="#preview-container" hx-swap="innerHTML"
-                               class="text-sm text-primary-600 hover:underline mr-2 cursor-pointer">预览</a>
-                            <a href="?dl_file={{ f.id }}" class="text-sm text-primary-600 hover:underline">下载</a>
+                               class="text-sm text-primary-600 dark:text-blue-400 hover:underline mr-2 cursor-pointer">预览</a>
+                            <a href="?dl_file={{ f.id }}" class="text-sm text-primary-600 dark:text-blue-400 hover:underline">下载</a>
                         </td>
                     </tr>
                     {% endfor %}

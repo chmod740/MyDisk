@@ -26,11 +26,11 @@
     {% include 'includes/markdown_theme.html' %}
     {% endif %}
 </head>
-<body class="h-full bg-gray-50 dark:bg-gray-900">
+<body class="h-full bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
     <div class="max-w-3xl mx-auto py-8 px-4">
         <!-- 头部 -->
         <div class="text-center mb-6">
-            <div class="text-sm text-gray-400 dark:text-gray-500 mb-1">{{ link.owner.username }} 分享的文件</div>
+            <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">{{ link.owner.username }} 分享的文件</div>
             <h1 class="text-2xl font-bold dark:text-white">{{ file.name }}</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 {{ file.size|filesizeformat }} &middot; {{ file.mime_type }}
@@ -121,7 +121,7 @@
                 <div class="text-center py-16">
                     <svg class="w-20 h-20 mx-auto mb-4 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     <p class="text-gray-500 dark:text-gray-400 text-lg">不支持在线预览</p>
-                    <p class="text-gray-400 dark:text-gray-500 text-sm mt-1">{{ file.mime_type }}</p>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">{{ file.mime_type }}</p>
                 </div>
             {% endif %}
         </div>

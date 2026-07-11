@@ -5,7 +5,7 @@
 <div class="max-w-6xl mx-auto space-y-8">
     <div>
         <h1 class="text-2xl font-bold dark:text-white mb-2">API 使用文档</h1>
-        <p class="text-gray-500 dark:text-gray-400">所有接口通过 <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">X-Api-Key</code> Header 认证。</p>
+        <p class="text-gray-500 dark:text-gray-400">所有接口通过 <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs text-gray-600 dark:text-gray-300">X-Api-Key</code> Header 认证。</p>
     </div>
 
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -47,7 +47,7 @@ FILE_ID=&lt;file_id&gt;</code></pre>
                         </tr>
                         <tr>
                             <td class="px-4 py-3 dark:text-gray-200">创建桶</td>
-                            <td class="px-4 py-3 font-mono text-green-600 dark:text-green-400">POST</td>
+                            <td class="px-4 py-3 font-mono text-green-700 dark:text-green-400">POST</td>
                             <td class="px-4 py-3 font-mono dark:text-gray-200">{{ base_url }}/buckets/api/buckets/create/</td>
                             <td class="px-4 py-3 font-mono text-gray-500 dark:text-gray-400">{"name":"photos","is_public":false}</td>
                         </tr>
@@ -65,7 +65,7 @@ FILE_ID=&lt;file_id&gt;</code></pre>
                         </tr>
                         <tr>
                             <td class="px-4 py-3 dark:text-gray-200">上传文件</td>
-                            <td class="px-4 py-3 font-mono text-green-600 dark:text-green-400">POST</td>
+                            <td class="px-4 py-3 font-mono text-green-700 dark:text-green-400">POST</td>
                             <td class="px-4 py-3 font-mono dark:text-gray-200">{{ base_url }}/buckets/api/buckets/&lt;bucket_id&gt;/upload/</td>
                             <td class="px-4 py-3 text-gray-500 dark:text-gray-400">multipart: files 一个或多个，folder_path 可选</td>
                         </tr>
@@ -83,7 +83,7 @@ FILE_ID=&lt;file_id&gt;</code></pre>
                         </tr>
                         <tr>
                             <td class="px-4 py-3 dark:text-gray-200">创建目录</td>
-                            <td class="px-4 py-3 font-mono text-green-600 dark:text-green-400">POST</td>
+                            <td class="px-4 py-3 font-mono text-green-700 dark:text-green-400">POST</td>
                             <td class="px-4 py-3 font-mono dark:text-gray-200">{{ base_url }}/buckets/api/buckets/&lt;bucket_id&gt;/folder/create/</td>
                             <td class="px-4 py-3 font-mono text-gray-500 dark:text-gray-400">{"name":"docs","parent_path":""}</td>
                         </tr>
@@ -762,7 +762,7 @@ end</code></pre>
 
     <div>
         <h2 class="text-xl font-bold dark:text-white mb-3">我的文件 API</h2>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">下面接口操作“我的文件”区域，不属于存储桶。认证方式同样使用 <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs">X-Api-Key</code>。</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">下面接口操作“我的文件”区域，不属于存储桶。认证方式同样使用 <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs text-gray-600 dark:text-gray-300">X-Api-Key</code>。</p>
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="min-w-full text-sm">
@@ -783,7 +783,7 @@ end</code></pre>
                         </tr>
                         <tr>
                             <td class="px-4 py-3 dark:text-gray-200">上传文件</td>
-                            <td class="px-4 py-3 font-mono text-green-600 dark:text-green-400">POST</td>
+                            <td class="px-4 py-3 font-mono text-green-700 dark:text-green-400">POST</td>
                             <td class="px-4 py-3 font-mono dark:text-gray-200">{{ base_url }}/files/api/upload/</td>
                             <td class="px-4 py-3 text-gray-500 dark:text-gray-400">multipart: files，folder 可选</td>
                         </tr>
@@ -801,7 +801,7 @@ end</code></pre>
                         </tr>
                         <tr>
                             <td class="px-4 py-3 dark:text-gray-200">创建文件夹</td>
-                            <td class="px-4 py-3 font-mono text-green-600 dark:text-green-400">POST</td>
+                            <td class="px-4 py-3 font-mono text-green-700 dark:text-green-400">POST</td>
                             <td class="px-4 py-3 font-mono dark:text-gray-200">{{ base_url }}/files/api/folder/create/</td>
                             <td class="px-4 py-3 font-mono text-gray-500 dark:text-gray-400">{"name":"docs","parent":"&lt;folder_id&gt;"}</td>
                         </tr>

@@ -10,7 +10,7 @@
 
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         {% if not groups %}
-        <div class="px-4 py-12 text-center text-gray-400">暂无用户组</div>
+        <div class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">暂无用户组</div>
         {% else %}
         <table class="w-full">
             <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
@@ -26,16 +26,16 @@
                 {% for g in groups %}
                 <tr>
                     <td class="px-4 py-3 text-sm font-medium dark:text-gray-200">{{ g.name }}</td>
-                    <td class="px-4 py-3 text-sm text-gray-500">{{ g.storage_quota|filesizeformat }}</td>
-                    <td class="px-4 py-3 text-sm text-gray-500">{{ g.user_count }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{{ g.storage_quota|filesizeformat }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{{ g.user_count }}</td>
                     <td class="px-4 py-3">
                         {% if g.is_default %}
-                        <span class="text-xs px-2 py-0.5 bg-primary-100 text-primary-700 rounded-full">默认</span>
+                        <span class="text-xs px-2 py-0.5 bg-primary-100 text-primary-700 dark:bg-gray-700 dark:text-primary-300 rounded-full">默认</span>
                         {% endif %}
                     </td>
                     <td class="px-4 py-3 text-right space-x-2">
                         <a href="{% url 'admin_group_edit' g.id %}" class="text-sm text-primary-600 hover:underline">编辑</a>
-                        <a href="{% url 'admin_group_delete' g.id %}" class="text-sm text-red-500 hover:underline">删除</a>
+                        <a href="{% url 'admin_group_delete' g.id %}" class="text-sm text-red-600 dark:text-red-400 hover:underline">删除</a>
                     </td>
                 </tr>
                 {% endfor %}

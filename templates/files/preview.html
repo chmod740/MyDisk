@@ -76,7 +76,7 @@
         <h1 class="text-xl font-bold dark:text-white truncate">{{ file.name }}</h1>
         <div class="flex items-center space-x-2">
             {% if file.extension == '.md' %}
-            <a href="{% url 'file_edit' file.id %}" class="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700">编辑</a>
+            <a href="{% url 'file_edit' file.id %}" class="px-4 py-2 bg-green-700 text-white text-sm rounded-lg hover:bg-green-800">编辑</a>
             {% endif %}
             <a href="{% url 'file_download' file.id %}" class="px-4 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700">
                 下载
@@ -190,8 +190,8 @@
                 <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
-                <p class="text-gray-500">此文件类型不支持在线预览</p>
-                <p class="text-gray-400 text-sm mt-1">{{ file.mime_type }}</p>
+                <p class="text-gray-500 dark:text-gray-400">此文件类型不支持在线预览</p>
+                <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">{{ file.mime_type }}</p>
             </div>
         {% endif %}
     </div>

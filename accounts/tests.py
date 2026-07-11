@@ -15,6 +15,13 @@ class RegistrationTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, 'accounts/register.html')
 
+    def test_register_page_has_dark_form_styles(self):
+        resp = self.client.get(self.url)
+
+        self.assertContains(resp, 'dark:bg-gray-700')
+        self.assertContains(resp, 'dark:text-gray-300')
+        self.assertContains(resp, 'title="切换主题"')
+
     def test_register_success(self):
         resp = self.client.post(self.url, {
             'username': 'newuser',
@@ -98,6 +105,14 @@ class LoginTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, 'accounts/login.html')
 
+    def test_login_page_has_dark_mode_controls(self):
+        resp = self.client.get(self.url)
+
+        self.assertContains(resp, 'dark:bg-gray-700')
+        self.assertContains(resp, 'dark:text-gray-300')
+        self.assertContains(resp, 'title="切换主题"')
+        self.assertContains(resp, '.dark input:not([type="checkbox"])')
+
     def test_login_success(self):
         resp = self.client.post(self.url, {
             'username': 'testuser',
@@ -180,6 +195,16 @@ class ProfileTests(TestCase):
         self.assertTemplateUsed(resp, 'accounts/profile.html')
         self.assertContains(resp, 'testuser')
         self.assertContains(resp, 'test@example.com')
+
+    def test_profile_page_has_readable_dark_text(self):
+        self.client.login(username='testuser', password='testpass123')
+        resp = self.client.get(reverse('profile'))
+
+        self.assertContains(resp, 'dark:text-gray-100')
+        self.assertContains(resp, 'dark:text-gray-400')
+        self.assertContains(resp, 'dark:bg-gray-700')
+        self.assertContains(resp, 'aria-label="打开导航菜单"')
+        self.assertContains(resp, 'ml-0 md:ml-56')
 
     def test_profile_shows_zero_usage(self):
         self.client.login(username='testuser', password='testpass123')

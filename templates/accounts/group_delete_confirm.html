@@ -6,7 +6,7 @@
     <div class="bg-white dark:bg-gray-800 dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 dark:border-gray-700 p-6 text-center">
         <h2 class="text-xl font-bold dark:text-white mb-2">删除用户组 "{{ group.name }}"</h2>
         <p class="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400 mb-2">该组当前有 {{ user_count }} 个用户</p>
-        <p class="text-sm text-red-500 mb-6">删除后，所有用户将被移出该组，但不会被删除。</p>
+        <p class="text-sm text-red-600 dark:text-red-400 mb-6">删除后，所有用户将被移出该组，但不会被删除。</p>
 
         {% if group.is_default %}
         <div class="bg-yellow-50 text-yellow-700 rounded-lg p-3 text-sm mb-4">
