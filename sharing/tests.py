@@ -377,8 +377,30 @@ class ShareAccessTests(TestCase):
         resp = self.client.get(reverse('share_access', args=[link.id]))
 
         self.assertContains(resp, 'js/markdown-sanitize.js')
-        self.assertContains(resp, 'window.setSanitizedMarkdownHtml')
+        self.assertContains(resp, 'js/markdown-renderer.js')
+        self.assertContains(resp, 'js/markdown-preview.js')
+        self.assertContains(resp, 'css/markdown-preview.css')
+        self.assertContains(resp, 'data-markdown-preview-shell')
+        self.assertContains(resp, 'data-markdown-preview-theme')
+        self.assertContains(resp, 'DjangoDiskMarkdownRenderer.renderWhenReady')
         self.assertNotContains(resp, 'el.innerHTML = html')
+
+    def test_shared_folder_markdown_inline_preview_uses_shared_renderer(self):
+        folder = Folder.objects.create(name='Public', owner=self.user)
+        markdown = File.objects.create(
+            name='inline.md', file=SimpleUploadedFile('inline.md', b'# Inline'),
+            size=8, mime_type='text/markdown', folder=folder, owner=self.user,
+        )
+        link = ShareLink.objects.create(folder=folder, owner=self.user)
+
+        resp = self.client.get(
+            reverse('share_access', args=[link.id]), {'preview': str(markdown.id)},
+            HTTP_HX_REQUEST='true',
+        )
+
+        self.assertTemplateUsed(resp, 'sharing/_share_preview_partial.html')
+        self.assertContains(resp, 'DjangoDiskMarkdownRenderer.render(source, el)')
+        self.assertNotContains(resp, 'marked.parse')
 
 
 class ShareLinkModelTests(TestCase):

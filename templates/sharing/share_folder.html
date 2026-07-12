@@ -5,9 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ folder.name }} - {{ site_name }} 分享</title>
+    <link rel="stylesheet" href="{% static 'css/markdown-preview.css' %}">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <script src="{% static 'js/markdown-sanitize.js' %}"></script>
+    <script src="{% static 'js/markdown-renderer.js' %}"></script>
+    <script src="{% static 'js/markdown-preview.js' %}" defer></script>
     <script>tailwind.config={darkMode:"class",theme:{extend:{colors:{primary:{500:"#3b82f6",600:"#2563eb",700:"#1d4ed8"}}}}};if(localStorage.getItem("theme")==="dark")document.documentElement.classList.add("dark");</script>
 </head>
 <body class="h-full bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>

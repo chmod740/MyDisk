@@ -1,164 +1,188 @@
-# Django Disk — 私人网盘系统
+# Django Disk
 
-一个基于 Django 的全功能私人网盘系统，支持文件管理、存储桶、Markdown 编辑预览、分享、API 密钥和用户管理。
+基于 Django 的私人网盘与对象存储系统，提供文件管理、存储桶、Markdown 实时编辑与增强预览、安全分享、API 密钥、配额和后台管理。
 
-[English Version](README_en.md)
+[English](README_en.md) · [测试状态](https://github.com/chmod740/MyDisk/actions/workflows/test.yml)
+
+[![Tests](https://github.com/chmod740/MyDisk/actions/workflows/test.yml/badge.svg)](https://github.com/chmod740/MyDisk/actions/workflows/test.yml)
+
+## 系统截图
+
+### 文件管理
+
+![Django Disk 文件管理](docs/screenshots/file-manager.jpg)
+
+### Markdown 实时编辑
+
+![Markdown 分栏实时编辑](docs/screenshots/markdown-editor.jpg)
+
+### Markdown 流程图预览
+
+![Markdown Mermaid 流程图](docs/screenshots/markdown-diagrams.jpg)
 
 ## 项目状态
 
-- Django 单元测试：226 项全部通过
-- 生产配置：`python manage.py check --deploy` 通过
-- 数据库迁移：`makemigrations --check --dry-run` 无遗漏
+- Django 单元测试：234 项全部通过
+- 数据库迁移检查：`makemigrations --check --dry-run` 无遗漏
 - CI：GitHub Actions 分别运行单元测试和 Playwright E2E
+- 开发数据库：SQLite
+- 生产数据库：PostgreSQL
+- 运行环境：Python 3.12、Django 6.0
 
-## 功能
+## 核心功能
 
 ### 文件管理
-- 📁 无限层级文件夹，拖拽上传，批量操作
-- 👁 图片/文本/PDF 在线预览
-- 📝 **Markdown 编辑器**：左右分栏实时预览，工具栏 + 快捷键，图片上传
-- 🎨 **Markdown 渲染**：GFM 表格/任务列表 + 代码高亮 + KaTeX 数学公式 + Mermaid 图表
-- 🗑 回收站（Windows 风格：目录折叠、点击进入、智能合并恢复）
-- 🔍 搜索、排序、分页
-- 🖱 右键菜单（预览/下载/重命名/移动/分享/删除）
-- ⚠ 上传同名文件冲突检测（覆盖/保留两者/跳过）
 
-### 存储桶 (Bucket)
-- 📦 类 S3 对象存储，支持公有/私有桶
-- 📝 Markdown 编辑与渲染（与文件管理一致的完整管线）
-- 📄 自动预览 README.md / index.md（当前目录下 index.md 优先）
-- 🖼 Markdown 编辑器内图片上传到同级目录，自动插入 `![](url)`
-- 🔑 API Key 管理（创建/撤销/删除，最后访问时间追踪）
-- 🔗 路径风格下载链接 + 私有桶 Token 鉴权
-- 📂 桶内目录管理 + 侧边栏目录树
-- 🖱 右键菜单（文件重命名/删除，目录重命名/删除）
+- 无限层级文件夹、搜索、排序和分页
+- 拖拽上传、批量移动、批量删除和批量下载
+- 同名文件支持覆盖、保留两者或跳过
+- 图片、文本、PDF 和 Markdown 在线预览
+- 文件和目录重命名、移动、下载、分享和删除
+- 带目录层级的回收站，支持恢复和彻底删除
+- 目录下载使用临时文件流式生成 ZIP，并校验归档路径
+
+### Markdown 编辑与预览
+
+- 120 ms 防抖实时预览，支持编辑、分栏和预览三种视图
+- 格式工具栏、常用快捷键、字数统计和双向滚动同步
+- GitHub、简洁阅读和公众号三种排版主题，自动保存浏览器偏好
+- 一键复制带格式 HTML
+- CommonMark 0.31.2 与 GFM 表格、任务列表、删除线、自动链接和提示块
+- highlight.js 多语言代码高亮
+- KaTeX 行内和块级公式：`$...$`、`$$...$$`、`\(...\)`、`\[...\]`
+- Mermaid 流程图、时序图、类图、状态图、ER 图、甘特图、饼图、象限图、XY 图和思维导图
+- 宽表格、公式和图表在移动端使用独立滚动或响应式缩放
+- 允许列表 HTML 消毒，过滤脚本、事件属性和危险 URL
+
+文件预览、存储桶 README、分享页面和实时编辑器共用同一套 Markdown 渲染与安全管线。
+
+### 存储桶
+
+- 类 S3 的公有/私有存储桶
+- 桶内目录、文件上传、重命名、删除和下载
+- 当前目录自动预览 `index.md` 或 `README.md`，`index.md` 优先
+- Markdown 编辑器可上传图片到当前桶目录并自动插入链接
+- 路径风格下载地址和私有桶 Token 鉴权
+- API Key 创建、撤销、删除和最后访问时间记录
 
 ### 分享
-- 🔗 生成分享链接（可选密码保护 + 过期时间）
-- 📦 支持分享文件、文件夹、存储桶
-- 📥 分享文件夹支持单文件下载和 ZIP 打包下载
-- 👁 分享页 Markdown 渲染预览（含代码高亮、数学公式、图表）
-- 👁 分享页图片/PDF 预览
 
-### 用户与权限
-- 👤 注册/登录/个人中心
-- 🛡 管理员面板：站点设置、用户管理、用户组管理
-- 📊 用户组配额管理，管理员保护（至少保留一个管理员）
-- 🖼 图片验证码（注册/登录可选）
+- 分享单个文件、文件夹或存储桶
+- 可选访问密码和过期时间
+- 分享目录支持单文件下载和递归 ZIP 下载
+- 分享页面支持图片、PDF、文本和完整 Markdown 渲染
+- 删除或软删除目标后自动撤销对应分享链接
+
+### 用户与管理
+
+- 注册、登录、个人资料和可选图片验证码
+- 用户组和独立存储配额
+- 管理员站点设置、用户管理和用户组管理
+- 至少保留一个管理员的保护规则
+- 全站浅色/暗色模式和移动端导航抽屉
 
 ### REST API
-- 🔐 所有 API 通过 `X-Api-Key` Header 认证
-- 📦 桶 CRUD + 文件上传/列举/删除
-- 📂 文件管理 CRUD
-- 📖 完整 API 文档，覆盖桶、文件和目录常用操作
-- 🌐 调用示例覆盖 cURL、JavaScript/TypeScript、Python、Go、PHP、Java、C# 和 Ruby
 
-### 其他
-- 🌓 全局浅色/暗色模式，登录页、公开桶和分享页等未登录页面也可直接切换
-- 📱 响应式布局：移动端使用抽屉式导航，桌面端保留固定侧栏
-- 📝 Markdown 渲染区、编辑器、表单、弹窗和 Django 管理后台均适配主题
-- 🛡 Markdown 允许列表消毒，拦截脚本、事件属性和危险 URL
-- 📊 统一存储配额、用量追踪和事务提交后的物理文件清理
-- 📥 ZIP 使用临时文件流式返回，并防止 Zip Slip 路径穿越
-- 🌐 中英文双语 README
+- 使用 `X-Api-Key` 请求头认证
+- 文件列表、上传、下载、删除和目录创建
+- 存储桶创建、列举、删除、目录操作和文件操作
+- API 文档覆盖 cURL、JavaScript/TypeScript、Python、Go、PHP、Java、C#/.NET 和 Ruby
+
+登录后访问 `/buckets/api-keys/docs/` 查看完整 API 文档与调用示例。
 
 ## 快速开始
 
-### 开发环境
+### 本地开发
 
 ```bash
-# 创建环境并安装依赖
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+git clone git@github.com:chmod740/MyDisk.git
+cd MyDisk
+
+python3.12 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 
-# 初始化数据库
 python manage.py migrate
-
-# 创建管理员
 python manage.py createsuperuser
-
-# 启动
-python manage.py runserver 8000
+python manage.py runserver 127.0.0.1:8000
 ```
 
-访问 http://localhost:8000 并使用刚创建的账号登录。`manage.py` 默认加载 `config.settings_dev`，仅用于本地开发。
+打开 <http://127.0.0.1:8000/>。`manage.py` 默认使用 `config.settings_dev`，本地开发无需配置生产密钥。
 
 ### Docker 部署
 
 ```bash
 cp .env.example .env
-# 编辑 .env，为数据库密码和 Django SECRET_KEY 设置随机强值
-docker compose up -d
+# 编辑 .env，替换数据库密码、SECRET_KEY、域名和 CSRF Origin
+docker compose up -d --build
 ```
 
-Docker 生产模式要求 `DJANGO_SECRET_KEY`、`DJANGO_ALLOWED_HOSTS` 和数据库密码，默认启用 HTTPS 跳转、HSTS 与 Secure Cookie。反向代理需传递 `X-Forwarded-Proto: https`。
+容器启动时会等待 PostgreSQL、自动执行迁移和 `collectstatic`，然后使用 Gunicorn 启动 Web 服务。
 
-| 环境变量 | 说明 |
-|---|---|
-| `DJANGO_SECRET_KEY` | 生产必填，建议至少 50 个随机字符 |
-| `DJANGO_ALLOWED_HOSTS` | 逗号分隔的域名列表 |
-| `DJANGO_CSRF_TRUSTED_ORIGINS` | 逗号分隔的 HTTPS Origin |
-| `DJANGO_DEBUG` | 生产必须为 `false` |
-| `DATABASE_URL` | PostgreSQL URL，支持 URL 编码密码和查询参数 |
+## 环境变量
 
-## 技术栈
+| 变量 | 是否必填 | 说明 |
+|---|---:|---|
+| `DJANGO_SECRET_KEY` | 生产必填 | 建议至少 50 个随机字符 |
+| `DJANGO_ALLOWED_HOSTS` | 生产必填 | 逗号分隔的域名或主机名 |
+| `DJANGO_CSRF_TRUSTED_ORIGINS` | 生产必填 | 逗号分隔的完整 HTTPS Origin |
+| `DJANGO_DEBUG` | 生产必填 | 生产环境必须为 `false` |
+| `DATABASE_URL` | Docker 自动设置 | PostgreSQL URL，支持 URL 编码密码和查询参数 |
+| `POSTGRES_PASSWORD` | Docker 必填 | PostgreSQL 用户密码 |
 
-| 层面 | 技术 |
-|------|------|
-| 后端 | Django 6.0, Python 3.12 |
-| 前端 | Django Templates, HTMX 2.0, Alpine.js 3, Tailwind CSS (CDN) |
-| Markdown | marked.js (GFM), highlight.js, KaTeX, Mermaid |
-| 数据库 | SQLite (开发) / PostgreSQL (生产) |
-| 部署 | Docker + Gunicorn + PostgreSQL + Caddy |
+生产模式默认启用 HTTPS 跳转、HSTS、Secure Cookie 和 `X-Content-Type-Options`。反向代理必须传递 `X-Forwarded-Proto: https`。
 
-Markdown 的安全消毒脚本位于本地静态目录；Tailwind、HTMX、Marked、KaTeX 和 Mermaid 等前端库目前仍使用公共 CDN，离线部署时需将它们镜像到本地静态目录。
+## 已有数据升级
 
-## 项目结构
+已有数据库和用户文件可以平滑升级，不需要删除或重新初始化数据库。升级前应同时备份数据库、`media/` 和环境配置。
 
+### 源码部署升级
+
+```bash
+git pull --ff-only
+source .venv/bin/activate
+pip install -r requirements.txt
+
+python manage.py migrate --noinput
+python manage.py collectstatic --noinput
+python manage.py check
+
+# 按实际服务名重启
+sudo systemctl restart django-disk
 ```
-django_disk/
-├── accounts/         # 用户、用户组、站点设置、验证码
-├── files/            # 文件管理、文件夹、回收站、Markdown 编辑器
-├── buckets/          # 存储桶、桶文件、API Key、REST API
-├── sharing/          # 分享链接、分享页面
-├── config/           # Django 配置
-├── templates/        # 前端模板
-│   ├── files/        #   文件管理页面（含 Markdown 编辑/预览）
-│   ├── buckets/      #   存储桶页面（含 README 预览）
-│   ├── sharing/      #   分享页面
-│   └── accounts/     #   账号页面
-├── media/            # 用户上传文件
-├── static/           # 静态资源
-├── .github/workflows/ # 单元测试与 Playwright E2E CI
-├── Dockerfile
-├── docker-compose.yml
-├── Caddyfile
-└── requirements.txt
+
+不要只覆盖代码并跳过迁移。`migrate` 只应用尚未执行的迁移，不会清空已有业务数据。升级期间先停止写入可获得最简单、最可靠的一致性窗口。
+
+### Docker 升级
+
+```bash
+git pull --ff-only
+docker compose up -d --build
 ```
+
+`pgdata` 与 `media_data` 使用独立持久卷，重新构建 Web 容器不会删除数据库或上传文件。
 
 ## 测试
 
 ```bash
-# 单元测试
+# 完整单元测试
 python manage.py test
 
-# 检查模型变更是否已生成迁移
+# 检查模型变更是否缺少迁移
 python manage.py makemigrations --check --dry-run
 
-# E2E 测试（需先启动服务）
-python manage.py runserver 8000 &
+# E2E
+pip install -r requirements-dev.txt
+playwright install chromium
+python manage.py migrate
+python manage.py runserver 127.0.0.1:8000 &
 python tests_e2e.py
 ```
-
-GitHub Actions 会分别运行单元测试和 Playwright E2E 测试。
-
-界面主题已在隔离测试数据上覆盖登录注册、文件与回收站、Markdown 编辑预览、存储桶、API 文档、分享页面、自定义管理面板和 Django 管理后台。桌面端逐页验证浅色与暗色模式，移动端同时验证主题切换、导航抽屉、横向溢出和资源加载。
 
 ## 运维命令
 
 ```bash
-# 修复所有用户的存储用量
+# 重算全部用户存储用量
 python manage.py recalculate_storage
 
 # 只重算指定用户
@@ -168,8 +192,42 @@ python manage.py recalculate_storage --user username
 python manage.py cleanup_trash
 ```
 
-## ZIP 目录命名
+## 技术栈
 
-下载目录时，ZIP 文件名使用「当前下载目录」的名称，不使用父目录名。下载桶根目录时使用桶名；ZIP 内部路径均相对于当前目录。
+| 层面 | 技术 |
+|---|---|
+| 后端 | Django 6.0、Python 3.12 |
+| 前端 | Django Templates、HTMX 2.0、Alpine.js 3、Tailwind CSS |
+| Markdown | Marked 18、highlight.js 11、KaTeX 0.17、Mermaid 11 |
+| 数据库 | SQLite（开发）、PostgreSQL 16（生产） |
+| 部署 | Docker、Gunicorn、外部 HTTPS 反向代理 |
+| CI | GitHub Actions、Django TestCase、Playwright |
 
-API 调用文档位于 `/buckets/api-keys/docs/`，需登录后访问。
+Markdown 消毒脚本和项目逻辑保存在本地静态目录；Tailwind、HTMX、Marked、KaTeX 和 Mermaid 当前通过公共 CDN 加载。完全离线部署时需要将这些依赖镜像到本地静态目录。
+
+## 项目结构
+
+```text
+django_disk/
+├── accounts/              # 用户、用户组、配额、验证码和管理后台
+├── buckets/               # 存储桶、API Key、桶文件与 REST API
+├── files/                 # 文件、文件夹、回收站和存储服务
+├── sharing/               # 分享链接与公开预览
+├── config/                # Django 配置、URL、WSGI 与 ASGI
+├── static/                # Markdown 渲染、编辑和安全脚本
+├── templates/             # 页面与共享组件
+├── docs/screenshots/      # README 系统截图
+├── .github/workflows/     # 单元测试和 E2E CI
+├── docker-compose.yml
+├── Dockerfile
+├── requirements.txt
+└── manage.py
+```
+
+## ZIP 命名规则
+
+下载目录时，ZIP 文件名使用当前下载目录的名称，不使用父目录名。下载存储桶根目录时使用桶名，归档内部路径均相对于当前目录。
+
+## 设计参考
+
+Markdown 编辑体验参考了 [doocs/md](https://github.com/doocs/md) 与 [WeMD](https://github.com/tenngoxars/WeMD) 的视图切换、排版主题和富文本复制思路。本项目使用 Django 模板、共享渲染器和允许列表安全管线独立实现。

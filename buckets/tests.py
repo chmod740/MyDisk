@@ -277,6 +277,56 @@ class BucketFileViewTests(TestCase):
         )
         self.assertEqual(resp.status_code, 302)
 
+    def test_markdown_editor_uses_shared_renderer_and_image_upload(self):
+        bucket_file = BucketFile.objects.create(
+            bucket=self.bucket, name='README.md', folder_path='docs/',
+            file=SimpleUploadedFile('README.md', b'# Bucket editor'), size=15,
+            mime_type='text/markdown',
+        )
+
+        resp = self.client.get(
+            reverse('bucket_file_edit', args=[self.bucket.id, bucket_file.id])
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'js/markdown-editor.js')
+        self.assertContains(resp, 'data-image-upload-url=')
+        self.assertContains(resp, 'data-folder-path="docs/"')
+        self.assertContains(resp, 'data-preview-theme')
+        self.assertContains(resp, '# Bucket editor')
+
+    def test_markdown_inline_preview_uses_shared_renderer(self):
+        bucket_file = BucketFile.objects.create(
+            bucket=self.bucket, name='inline.md',
+            file=SimpleUploadedFile('inline.md', b'# Inline'), size=8,
+            mime_type='text/markdown',
+        )
+
+        resp = self.client.get(
+            reverse('bucket_file_preview', args=[self.bucket.id, bucket_file.id]),
+            HTTP_HX_REQUEST='true',
+        )
+
+        self.assertTemplateUsed(resp, 'buckets/_preview_inline.html')
+        self.assertContains(resp, 'DjangoDiskMarkdownRenderer.render(source, el)')
+        self.assertNotContains(resp, 'marked.parse')
+
+    def test_markdown_full_preview_has_style_selector(self):
+        bucket_file = BucketFile.objects.create(
+            bucket=self.bucket, name='styled.md',
+            file=SimpleUploadedFile('styled.md', b'# Styled'), size=8,
+            mime_type='text/markdown',
+        )
+
+        resp = self.client.get(
+            reverse('bucket_file_preview', args=[self.bucket.id, bucket_file.id])
+        )
+
+        self.assertContains(resp, 'data-markdown-preview-shell')
+        self.assertContains(resp, 'data-markdown-preview-theme')
+        self.assertContains(resp, 'css/markdown-preview.css')
+        self.assertContains(resp, 'js/markdown-preview.js')
+
     def test_delete_file(self):
         bf = BucketFile.objects.create(
             bucket=self.bucket, name='del.txt',

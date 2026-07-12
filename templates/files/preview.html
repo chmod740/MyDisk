@@ -3,13 +3,13 @@
 
 {% block head %}
 {% if file.extension == '.md' %}
-<link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.9.0/styles/github.min.css">
+<link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/styles/github.min.css">
 <link rel="stylesheet" href="https://unpkg.com/github-markdown-css@5.8.1/github-markdown.css">
-<link rel="stylesheet" href="https://unpkg.com/katex@0.16.21/dist/katex.min.css">
-<script src="https://unpkg.com/@highlightjs/cdn-assets@11.9.0/highlight.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
-<script src="https://unpkg.com/katex@0.16.21/dist/katex.min.js"></script>
-<script src="https://unpkg.com/mermaid@11.6.0/dist/mermaid.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.17.0/dist/katex.min.css">
+<script src="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@18.0.5/lib/marked.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.17.0/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/mermaid.min.js"></script>
 <style>
 .markdown-body {
     box-sizing: border-box;
@@ -88,98 +88,19 @@
         </div>
     </div>
 
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="{% if preview_type == 'text' and file.extension == '.md' %}markdown-preview-shell preview-theme-github {% endif %}bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
+         {% if preview_type == 'text' and file.extension == '.md' %}data-markdown-preview-shell{% endif %}>
         {% if preview_type == 'image' %}
             <div class="flex justify-center p-4">
                 <img src="{{ file.file.url }}" alt="{{ file.name }}" class="max-w-full max-h-[70vh] object-contain rounded-lg">
             </div>
         {% elif preview_type == 'text' %}
             {% if file.extension == '.md' %}
-            <div class="markdown-body" id="md-preview">{{ content }}</div>
-            <script>
-            (function render() {
-                var el = document.getElementById('md-preview');
-                if (!el) return;
-                if (typeof marked === 'undefined' || typeof hljs === 'undefined') {
-                    setTimeout(render, 100);
-                    return;
-                }
-
-                var text = el.textContent;
-
-                // Extract code blocks to protect math expressions inside them
-                var codeBlocks = [];
-                text = text.replace(/(```[\s\S]*?```)/g, function (m) {
-                    codeBlocks.push(m);
-                    return '\x00CODE' + (codeBlocks.length - 1) + '\x00';
-                });
-
-                // Math blocks: $$...$$
-                var mathBlocks = [];
-                text = text.replace(/\$\$([\s\S]*?)\$\$/g, function (_, f) {
-                    mathBlocks.push({ formula: f.trim(), display: true });
-                    return '\x00MATH' + (mathBlocks.length - 1) + '\x00';
-                });
-
-                // Math inline: $...$
-                var mathInlines = [];
-                text = text.replace(/\$(.+?)\$/g, function (_, f) {
-                    mathInlines.push({ formula: f.trim(), display: false });
-                    return '\x00MINLINE' + (mathInlines.length - 1) + '\x00';
-                });
-
-                // Restore code blocks
-                text = text.replace(/\x00CODE(\d+)\x00/g, function (_, i) {
-                    return codeBlocks[parseInt(i)];
-                });
-
-                marked.setOptions({
-                    gfm: true,
-                    breaks: true,
-                    highlight: function (code, lang) {
-                        if (lang && hljs.getLanguage(lang)) {
-                            return hljs.highlight(code, { language: lang }).value;
-                        }
-                        return code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                    }
-                });
-
-                var html = marked.parse(text);
-
-                // Restore math blocks
-                html = html.replace(/\x00MATH(\d+)\x00/g, function (_, i) {
-                    var m = mathBlocks[parseInt(i)];
-                    if (typeof katex !== 'undefined') {
-                        try {
-                            return katex.renderToString(m.formula, { displayMode: true, throwOnError: false });
-                        } catch (e) { return '<pre><code>' + m.formula + '</code></pre>'; }
-                    }
-                    return '<pre><code>' + m.formula + '</code></pre>';
-                });
-
-                // Restore math inlines
-                html = html.replace(/\x00MINLINE(\d+)\x00/g, function (_, i) {
-                    var m = mathInlines[parseInt(i)];
-                    if (typeof katex !== 'undefined') {
-                        try {
-                            return katex.renderToString(m.formula, { displayMode: false, throwOnError: false });
-                        } catch (e) { return '<code>' + m.formula + '</code>'; }
-                    }
-                    return '<code>' + m.formula + '</code>';
-                });
-
-                // Transform mermaid code blocks
-                html = html.replace(/<pre><code class="language-mermaid">([\s\S]*?)<\/code><\/pre>/g,
-                    '<pre class="mermaid">$1</pre>');
-
-                window.setSanitizedMarkdownHtml(el, html);
-
-                // Render mermaid diagrams
-                if (typeof mermaid !== 'undefined' && el.querySelector('.mermaid')) {
-                    window.renderMarkdownMermaid(el);
-                }
-            })();
-            </script>
+            {% include 'includes/markdown_preview_controls.html' %}
+            <div class="markdown-preview-viewport">
+                <div class="markdown-body markdown-preview-content" id="md-preview">{{ content }}</div>
+            </div>
+            {% include 'includes/markdown_render_script.html' with target_id='md-preview' %}
             {% else %}
             <pre class="bg-gray-900 text-green-400 p-4 overflow-auto max-h-[70vh] text-sm"><code>{{ content }}</code></pre>
             {% endif %}

@@ -396,10 +396,48 @@ class FileOperationTests(TestCase):
         self.assertContains(resp, '.dark .markdown-body')
         self.assertContains(resp, 'background-color: #0d1117')
         self.assertContains(resp, 'window.renderMarkdownMermaid')
-        self.assertContains(resp, 'window.setSanitizedMarkdownHtml')
         self.assertContains(resp, 'js/markdown-sanitize.js')
+        self.assertContains(resp, 'js/markdown-renderer.js')
+        self.assertContains(resp, 'js/markdown-preview.js')
+        self.assertContains(resp, 'css/markdown-preview.css')
+        self.assertContains(resp, 'data-markdown-preview-shell')
+        self.assertContains(resp, 'data-markdown-preview-theme')
+        self.assertContains(resp, 'value="wechat"')
+        self.assertContains(resp, 'DjangoDiskMarkdownRenderer.renderWhenReady')
         self.assertNotContains(resp, 'el.innerHTML = html')
         self.assertContains(resp, 'MutationObserver')
+
+    def test_markdown_inline_preview_uses_shared_renderer(self):
+        markdown = File.objects.create(
+            name='inline.md', file=SimpleUploadedFile('inline.md', b'# Inline'),
+            size=8, mime_type='text/markdown', owner=self.user,
+        )
+
+        resp = self.client.get(
+            reverse('file_preview', args=[markdown.id]), HTTP_HX_REQUEST='true',
+        )
+
+        self.assertTemplateUsed(resp, 'files/_preview_inline.html')
+        self.assertContains(resp, 'DjangoDiskMarkdownRenderer.render(source, el)')
+        self.assertNotContains(resp, 'marked.parse')
+
+    def test_markdown_editor_uses_shared_live_renderer(self):
+        markdown = File.objects.create(
+            name='editor.md',
+            file=SimpleUploadedFile('editor.md', b'# Live editor'),
+            size=13, mime_type='text/markdown', owner=self.user,
+        )
+
+        resp = self.client.get(reverse('file_edit', args=[markdown.id]))
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'js/markdown-editor.js')
+        self.assertContains(resp, 'css/markdown-editor.css')
+        self.assertContains(resp, 'data-markdown-editor')
+        self.assertContains(resp, 'data-view-mode="split"')
+        self.assertContains(resp, 'value="wechat"')
+        self.assertContains(resp, 'data-copy-html')
+        self.assertContains(resp, '# Live editor')
 
     def test_file_preview_pdf(self):
         pdf = SimpleUploadedFile('doc.pdf', b'%PDF-1.4 fake pdf', content_type='application/pdf')
@@ -982,6 +1020,34 @@ class MarkdownSanitizerTests(TestCase):
         self.assertIn("name.indexOf('on') === 0", source)
         self.assertIn('javascript:', source)
         self.assertIn('target.replaceChildren.apply', source)
+
+    def test_shared_editor_keeps_rendering_and_sanitizing_features(self):
+        from django.conf import settings
+        source = (settings.BASE_DIR / 'static/js/markdown-renderer.js').read_text()
+
+        self.assertIn('window.setSanitizedMarkdownHtml', source)
+        self.assertIn('window.renderMarkdownMermaid', source)
+        self.assertIn('decorateAlerts', source)
+
+        editor_source = (settings.BASE_DIR / 'static/js/markdown-editor.js').read_text()
+        self.assertIn("'text/html': new Blob", editor_source)
+        self.assertIn("previewPane.addEventListener('scroll'", editor_source)
+
+    def test_renderer_covers_gfm_math_code_and_mermaid_charts(self):
+        from django.conf import settings
+        renderer = (settings.BASE_DIR / 'static/js/markdown-renderer.js').read_text()
+        preview_css = (settings.BASE_DIR / 'static/css/markdown-preview.css').read_text()
+        preview_js = (settings.BASE_DIR / 'static/js/markdown-preview.js').read_text()
+
+        self.assertIn('gfm: true', renderer)
+        self.assertIn('protectFencedCode', renderer)
+        self.assertIn('katex.renderToString', renderer)
+        self.assertIn('highlightElement', renderer)
+        self.assertIn('decorateTables', renderer)
+        self.assertIn('language-(?:mermaid|mmd)', renderer)
+        self.assertIn('markdown-table-wrap', preview_css)
+        self.assertIn('.markdown-body .mermaid svg', preview_css)
+        self.assertIn("var THEMES = ['github', 'clean', 'wechat']", preview_js)
 
 
 class SecurityTests(TestCase):

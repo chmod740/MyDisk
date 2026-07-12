@@ -1,0 +1,12 @@
+<script>
+(function () {
+    var target = document.getElementById('{{ target_id }}');
+    if (!target || !window.DjangoDiskMarkdownRenderer) return;
+    var source = target.textContent;
+    window.DjangoDiskMarkdownRenderer.renderWhenReady(source, target, {
+        onError: function () {
+            target.textContent = 'Markdown 渲染失败';
+        }
+    });
+})();
+</script>

@@ -138,20 +138,55 @@
 .dark .markdown-body .mermaid svg {
     background: transparent;
 }
+.markdown-alert {
+    border-left: 4px solid #6b7280 !important;
+    padding: 12px 16px !important;
+    border-radius: 0 6px 6px 0;
+    background: #f9fafb;
+}
+.dark .markdown-alert {
+    background: #161b22;
+}
+.markdown-alert-title {
+    margin-bottom: 4px;
+    font-weight: 700;
+}
+.markdown-alert-note { border-left-color: #2563eb !important; }
+.markdown-alert-tip { border-left-color: #16a34a !important; }
+.markdown-alert-important { border-left-color: #7c3aed !important; }
+.markdown-alert-warning { border-left-color: #ca8a04 !important; }
+.markdown-alert-caution { border-left-color: #dc2626 !important; }
 </style>
 <script>
 (function () {
+    var mermaidRenderStates = new WeakMap();
+
+    if (typeof mermaid !== 'undefined') {
+        mermaid.initialize({
+            startOnLoad: false,
+            securityLevel: 'strict'
+        });
+    }
+
     window.markdownThemeIsDark = function () {
         return document.documentElement.classList.contains('dark');
     };
 
     window.renderMarkdownMermaid = function (root) {
-        if (typeof mermaid === 'undefined') return;
+        if (typeof mermaid === 'undefined') return Promise.resolve();
         root = root || document;
         var blocks = root.querySelectorAll('.mermaid');
-        if (!blocks.length) return;
+        if (!blocks.length) return Promise.resolve();
+
+        var state = mermaidRenderStates.get(root) || { running: false, pending: false };
+        mermaidRenderStates.set(root, state);
+        if (state.running) {
+            state.pending = true;
+            return state.promise;
+        }
 
         blocks.forEach(function (block) {
+            block.classList.remove('mermaid-error');
             if (!block.dataset.mermaidSource) {
                 block.dataset.mermaidSource = block.textContent;
             } else if (block.dataset.processed) {
@@ -166,7 +201,28 @@
             securityLevel: 'strict',
             flowchart: { htmlLabels: false }
         });
-        mermaid.run({ nodes: Array.prototype.slice.call(blocks) });
+        state.running = true;
+        state.promise = Promise.resolve(
+            mermaid.run({
+                nodes: Array.prototype.slice.call(blocks),
+                suppressErrors: true
+            })
+        ).catch(function () {
+            blocks.forEach(function (block) {
+                if (!block.querySelector('svg')) {
+                    block.textContent = block.dataset.mermaidSource || '';
+                    block.classList.add('mermaid-error');
+                    block.title = 'Mermaid 图表语法错误';
+                }
+            });
+        }).finally(function () {
+            state.running = false;
+            if (state.pending) {
+                state.pending = false;
+                setTimeout(function () { window.renderMarkdownMermaid(root); }, 0);
+            }
+        });
+        return state.promise;
     };
 
     if (!window.markdownThemeObserver) {

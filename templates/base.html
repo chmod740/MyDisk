@@ -30,10 +30,13 @@
             color: #f87171;
         }
     </style>
+    <link rel="stylesheet" href="{% static 'css/markdown-preview.css' %}">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <script src="https://unpkg.com/alpinejs@3.14.3/dist/cdn.min.js" defer></script>
     <script src="{% static 'js/markdown-sanitize.js' %}"></script>
+    <script src="{% static 'js/markdown-renderer.js' %}"></script>
+    <script src="{% static 'js/markdown-preview.js' %}" defer></script>
     <script>
         tailwind.config = {
             darkMode: 'class',

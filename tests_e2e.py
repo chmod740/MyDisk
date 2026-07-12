@@ -43,6 +43,26 @@ def get_csrf(page):
     )
 
 
+def login_user(page, username, password):
+    page.goto(f'{BASE_URL}/accounts/login/')
+    page.wait_for_load_state('networkidle')
+    page.fill('input[name="username"]', username)
+    page.fill('input[name="password"]', password)
+    page.click('button[type="submit"]')
+    page.wait_for_load_state('networkidle')
+
+
+def logout_user(page):
+    """Use the real POST logout form when the current page has an authenticated shell."""
+    form = page.locator('form[action="/accounts/logout/"]').first
+    if form.count() and form.is_visible():
+        form.locator('button[type="submit"]').click()
+        page.wait_for_load_state('networkidle')
+        return
+    page.goto(f'{BASE_URL}/accounts/login/')
+    page.wait_for_load_state('networkidle')
+
+
 def upload_file(page, file_paths):
     """通过页面上传文件 — 打开上传弹窗并设置文件"""
     btn = page.locator('button:has-text("上传")').first
@@ -433,7 +453,7 @@ def run_tests():
         check(has_share, '分享管理页显示分享的文件')
 
         # 获取分享 ID
-        share_id = page.evaluate('''() => {
+        share_id = page.evaluate(r'''() => {
             for (const a of document.querySelectorAll('a[href*="/share/"]')) {
                 const href = a.getAttribute('href');
                 const m = href.match(/share\/([a-f0-9-]+)\/$/);
@@ -452,30 +472,19 @@ def run_tests():
 
         if share_id:
             # 匿名访问分享
-            page.goto(f'{BASE_URL}/accounts/logout/')
-            wait(page, 300)
+            logout_user(page)
             page.goto(f'{BASE_URL}/share/{share_id}/')
             page.wait_for_load_state('networkidle')
             check('test.py' in page.content(), '匿名可访问分享页')
 
             # 重新登录清理
-            page.goto(f'{BASE_URL}/accounts/login/')
+            login_user(page, TEST_USER, TEST_PASS)
+            page.goto(f'{BASE_URL}/share/manage/')
             page.wait_for_load_state('networkidle')
-            page.fill('input[name="username"]', TEST_USER)
-            page.fill('input[name="password"]', TEST_PASS)
-            page.click('button[type="submit"]')
-            page.wait_for_load_state('networkidle')
-
-            csrf = get_csrf(page)
-            page.evaluate(f'''async () => {{
-                await fetch('/share/{share_id}/delete/', {{
-                    method: 'POST',
-                    headers: {{'X-CSRFToken': '{csrf}', 'Content-Type': 'application/x-www-form-urlencoded'}},
-                    body: ''
-                }});
-            }}''')
-            wait(page, 300)
-
+            delete_form = page.locator(f'form[action="/share/{share_id}/delete/"]').first
+            if delete_form.count():
+                delete_form.evaluate('(form) => form.submit()')
+                page.wait_for_load_state('networkidle')
             page.goto(f'{BASE_URL}/share/manage/')
             page.wait_for_load_state('networkidle')
             check('暂无分享链接' in page.content(), '分享删除后列表为空')
@@ -499,8 +508,7 @@ def run_tests():
 
         other_user = f'other_{_suffix}'
 
-        page.goto(f'{BASE_URL}/accounts/logout/')
-        wait(page, 300)
+        logout_user(page)
         page.goto(f'{BASE_URL}/accounts/register/')
         page.wait_for_load_state('networkidle')
         page.fill('input[name="username"]', other_user)
@@ -596,20 +604,14 @@ def run_tests():
             }
             return null;
         }''')
-        page.goto(f'{BASE_URL}/accounts/logout/')
-        wait(page, 300)
+        logout_user(page)
         if bucket_detail_url:
             page.goto(bucket_detail_url)
             wait(page, 500)
             check('public-files' in page.content(), '匿名可访问公开桶')
 
         # 重新登录
-        page.goto(f'{BASE_URL}/accounts/login/')
-        page.wait_for_load_state('networkidle')
-        page.fill('input[name="username"]', TEST_USER)
-        page.fill('input[name="password"]', TEST_PASS)
-        page.click('button[type="submit"]')
-        page.wait_for_load_state('networkidle')
+        login_user(page, TEST_USER, TEST_PASS)
 
         # ============================================================
         # 14. API Key 管理
@@ -625,7 +627,7 @@ def run_tests():
         csrf = get_csrf(page)
 
         # 获取 my-bucket 的 ID
-        my_bucket_id = page.evaluate('''() => {
+        my_bucket_id = page.evaluate(r'''() => {
             for (const a of document.querySelectorAll('a')) {
                 const t = a.textContent.trim();
                 if (t.includes('my-bucket') || t.includes('my-bucket')) {
@@ -685,7 +687,7 @@ def run_tests():
         csrf = get_csrf(page)
 
         # 清理所有分享链接
-        page.evaluate(f'''async () => {{
+        page.evaluate(fr'''async () => {{
             const btns = document.querySelectorAll('button');
             for (const b of btns) {{
                 if (b.textContent === '复制链接') {{
